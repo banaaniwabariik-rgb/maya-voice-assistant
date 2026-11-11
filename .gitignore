@@ -1,0 +1,80 @@
+# =====================================================================
+# SALADUSED JA ISIKUANDMED — EI TOHI KUNAGI REPOSSE JÕUDA
+# =====================================================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.keystore
+*.jks
+*.p12
+keystore.properties
+local.properties
+*.session
+*.session-journal
+
+# Andmebaasid ja kõik, mis sisaldab vestlusi, mälufakte, meeldetuletusi
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+memory.json
+knowledge.json
+agent_state.json
+
+# Logid ja diagnostika
+*.log
+logs/
+journal*.jsonl
+
+# Varukoopiad
+*.bak
+*.bak_*
+*.backup
+*.before_*
+*.BAK_*
+*_backup_*
+backups/
+backups_*/
+
+# Helifailid ja ajutised meediafailid
+*.wav
+*.ogg
+*.mp3
+*.m4a
+*.jpg
+*.jpeg
+*.png
+!android/app/src/main/res/**/*.png
+downloads/
+tmp/
+
+# =====================================================================
+# EHITUSE JA KESKKONNA PRÜGI
+# =====================================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Android
+*.apk
+*.aab
+.gradle/
+build/
+android/build/
+android/app/build/
+.cxx/
+captures/
+
+# IDE ja OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

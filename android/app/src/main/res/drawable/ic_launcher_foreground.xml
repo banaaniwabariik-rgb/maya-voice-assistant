@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Välimine neoonkuma ring -->
+    <path
+        android:pathData="M54,16 A38,38 0 1,1 53.9,16"
+        android:strokeWidth="1.5"
+        android:strokeColor="#22d3ee"
+        android:strokeAlpha="0.4"/>
+
+    <!-- Pöörlev küber-kaare segment 1 -->
+    <path
+        android:pathData="M54,22 A32,32 0 0,1 86,54"
+        android:strokeWidth="2.5"
+        android:strokeColor="#38bdf8"
+        android:strokeLineCap="round"/>
+
+    <!-- Pöörlev küber-kaare segment 2 -->
+    <path
+        android:pathData="M54,86 A32,32 0 0,1 22,54"
+        android:strokeWidth="2.5"
+        android:strokeColor="#818cf8"
+        android:strokeLineCap="round"/>
+
+    <!-- Sisemine orbi tuum -->
+    <path
+        android:pathData="M54,32 A22,22 0 1,1 53.9,32"
+        android:fillColor="#0284c7"/>
+
+    <path
+        android:pathData="M54,36 A18,18 0 1,1 53.9,36"
+        android:fillColor="#38bdf8"/>
+
+    <!-- Keskne helendav tuumik -->
+    <path
+        android:pathData="M54,44 A10,10 0 1,1 53.9,44"
+        android:fillColor="#ffffff"
+        android:fillAlpha="0.9"/>
+</vector>

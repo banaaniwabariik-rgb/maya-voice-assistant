@@ -1,0 +1,48 @@
+# MAYA — Pythoni sõltuvused
+#
+# Versioonid on PÕRANDAGA (>=), mitte lukustatud, sest Gemini Live
+# preview-API-d muutuvad. `google-genai` on siiski oluline: selle
+# projekti Live-kood on kontrollitud versioonidega 2.33.0 (tootmine) ja
+# 3.1.0 (avalik koopia). Vanemad versioonid ei pruugi tunda välju
+# `turn_complete_reason`, `session_resumption` ega
+# `context_window_compression`.
+#
+# Paigaldus:
+#   python3 -m venv .venv
+#   source .venv/bin/activate          # Windows: .venv\Scripts\activate
+#   pip install -r server/requirements.txt
+
+# =====================================================================
+# KOHUSTUSLIKUD
+# =====================================================================
+# Need imporditakse mooduli tasemel, st ilma nendeta backend EI KÄIVITU.
+# (Kontrollitud AST-iga: vt docs/ARENDUS.md, "sõltuvuste kontroll".)
+fastapi>=0.110
+uvicorn[standard]>=0.27
+google-genai>=2.33.0
+websockets>=14.0
+requests>=2.31
+# FastAPI vormiandmed (UploadFile / Form) – ilma selleta viskab
+# `import web_maya` RuntimeError'i juba käivitamisel.
+python-multipart>=0.0.9
+
+# Veebisisu lugemine ja YouTube'i subtiitrid. features_pack impordib
+# need mooduli tasemel, seega praegu on nad KOHUSTUSLIKUD. Kui soovid
+# neist loobuda, tuleb features_pack.py importe laisaks muuta – seda
+# avalik koopia TEADLIKULT ei tee, et kood jääks originaaliga identseks.
+trafilatura>=1.8
+youtube-transcript-api>=0.6
+
+# Tekstirada (Groq). listen_direct impordib mooduli tasemel.
+groq>=0.11
+
+# =====================================================================
+# VALIKULISED (imporditakse laisalt, funktsiooni sees)
+# =====================================================================
+# certifi — TLS-juurisertifikaadid, kui süsteemsed puuduvad
+certifi>=2024.2.2
+# pypdf — PDF-ide lugemine
+pypdf>=4.0
+# pyrogram + tgcrypto — AINULT Telegrami sild. Häälkõneks pole vaja.
+# pyrogram>=2.0
+# tgcrypto>=1.2

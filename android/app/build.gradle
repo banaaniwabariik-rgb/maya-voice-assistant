@@ -1,0 +1,70 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.maya.live'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.maya.live"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            manifestPlaceholders = [appLabel: "Maya Live"]
+            buildConfigField "boolean", "ENABLE_WATCHER", "true"
+            // MAYA BACKENDI AADRESS. Loetakse gradle.properties-ist
+            // (mayaBaseUrl) või -PmayaBaseUrl=... käsurealt.
+            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+        }
+        release {
+            minifyEnabled false
+            manifestPlaceholders = [appLabel: "Maya Live"]
+            buildConfigField "boolean", "ENABLE_WATCHER", "true"
+            // MAYA BACKENDI AADRESS. Loetakse gradle.properties-ist
+            // (mayaBaseUrl) või -PmayaBaseUrl=... käsurealt.
+            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+        }
+        // KATSEVERSIOON: paigaldub PÄRIS äpi KÕRVALE eraldi rakendusena
+        // (applicationId com.maya.live.lab). Nii saab uut kujundust proovida,
+        // ilma et töötav äpp muutuks.
+        //
+        // Valvur on siin VÄLJAS: CallWatcherService pollib /api/call_events
+        // iga 3 s ja see on KUSTUTAV järjekord – kaks pollijat varastaksid
+        // teineteiselt meeldetuletuskõnesid.
+        lab {
+            initWith debug
+            applicationIdSuffix ".lab"
+            versionNameSuffix "-lab"
+            manifestPlaceholders = [appLabel: "Maya LAB"]
+            buildConfigField "boolean", "ENABLE_WATCHER", "false"
+            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+            matchingFallbacks = ["debug"]
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.webkit:webkit:1.10.0'
+}

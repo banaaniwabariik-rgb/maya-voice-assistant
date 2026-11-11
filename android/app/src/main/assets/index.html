@@ -1,0 +1,3193 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maya Live</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: #000000; 
+            color: #f8fafc; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 14px 12px 18px; 
+            overflow: hidden; 
+        }
+
+        /* Top Header & Pulse Switch */
+        .top-header { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-top: 4px; }
+        .title { font-size: 19px; font-weight: 800; letter-spacing: 2.5px; color: #ffffff; text-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+        
+        /* Peamine ONLINE/OFFLINE lülitusnupp */
+        .live-tag { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            color: #22c55e; 
+            font-size: 11px; 
+            font-weight: 800; 
+            letter-spacing: 1.5px; 
+            cursor: pointer;
+            padding: 5px 14px;
+            border-radius: 20px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .live-tag.offline {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.35);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+        .live-dot { 
+            width: 8px; 
+            height: 8px; 
+            background: #22c55e; 
+            border-radius: 50%; 
+            box-shadow: 0 0 10px #22c55e; 
+            animation: blink 1.6s infinite; 
+        }
+        .live-tag.offline .live-dot {
+            background: #ef4444;
+            box-shadow: none;
+            animation: none;
+        }
+
+        /* Karakterite riba */
+        .persona-bar { 
+            width: 100%; 
+            display: flex; 
+            gap: 7px; 
+            overflow-x: auto; 
+            padding: 6px 2px; 
+            scrollbar-width: none; 
+            margin-top: 4px;
+        }
+        .persona-bar::-webkit-scrollbar { display: none; }
+        .persona-chip {
+            flex-shrink: 0;
+            background: rgba(20, 26, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+        
+        /* Häälevaliku ja hoiatuse stiilid */
+        .voice-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 14px;
+            margin-bottom: 2px;
+            gap: 6px;
+        }
+        .voice-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 2px;
+        }
+        .voice-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+        .voice-chip {
+            background: rgba(20, 26, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px; /* Ümaramad ovaalsed nupud */
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .voice-chip .icon {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .voice-chip.active {
+            background: rgba(6, 182, 212, 0.12);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+        }
+        .voice-alert {
+            display: none; /* Vaikimisi peidus */
+            font-size: 11px;
+            font-weight: 600;
+            color: #f59e0b; /* Merevaigukollane hoiatus */
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        .persona-chip.active {
+            background: rgba(6, 182, 212, 0.18);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+        }
+
+        /* Futuristlik Küber-Orb */
+        .orb-stage {
+            position: relative;
+            width: 230px;
+            height: 230px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: auto 0;
+        }
+        .cyber-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px dashed rgba(56, 189, 248, 0.3);
+            pointer-events: none;
+        }
+        .ring-1 { width: 220px; height: 220px; animation: spinCW 24s linear infinite; border-top-color: #38bdf8; border-bottom-color: #818cf8; }
+        .ring-2 { width: 185px; height: 185px; animation: spinCCW 16s linear infinite; border-left-color: #06b6d4; border-width: 1.5px; opacity: 0.6; }
+        
+        .orb-outer-glow {
+            position: absolute;
+            width: 175px;
+            height: 175px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.4), rgba(139, 92, 246, 0.2), transparent 70%);
+            filter: blur(28px);
+            animation: pulseGlow 3.5s infinite ease-in-out;
+        }
+        .orb {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #67e8f9 0%, #0284c7 35%, #4f46e5 70%, #030712 95%);
+            box-shadow: 
+                inset -8px -8px 24px rgba(0, 0, 0, 0.85),
+                inset 8px 8px 20px rgba(255, 255, 255, 0.5),
+                0 0 50px rgba(56, 189, 248, 0.6),
+                0 0 85px rgba(99, 102, 241, 0.35);
+            animation: orbFloat 4s infinite ease-in-out;
+            transition: all 0.35s ease;
+        }
+        .orb.listening {
+            transform: scale(calc(1.09 * var(--lvl, 1)));
+            box-shadow: 0 0 65px #06b6d4, 0 0 110px rgba(14, 165, 233, 0.6);
+        }
+        .orb.thinking {
+            background: radial-gradient(circle at 35% 35%, #f472b6 0%, #d946ef 40%, #6366f1 75%, #030712 95%);
+            box-shadow: 0 0 70px rgba(244, 114, 182, 0.8), 0 0 100px rgba(217, 70, 239, 0.5);
+            animation: orbThink 1.5s infinite linear;
+        }
+        .orb.speaking {
+            background: radial-gradient(circle at 35% 35%, #86efac 0%, #10b981 35%, #0284c7 75%, #030712 95%);
+            box-shadow: 0 0 75px rgba(74, 222, 128, 0.85), 0 0 120px rgba(6, 182, 212, 0.6);
+            animation: orbSpeak 1s infinite ease-in-out;
+        }
+        .orb.offline {
+            background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 55%, #020617 95%);
+            box-shadow: 0 0 20px rgba(100, 116, 139, 0.3);
+            filter: grayscale(85%);
+        }
+
+        /* Suure kontrastsusega helinivoo ja detsibellid */
+        .wave-section { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin: 2px 0; }
+        .waves { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 3.5px; 
+            height: 42px; 
+            width: 100%;
+            max-width: 360px;
+        }
+        .bar { 
+            flex: 1;
+            height: 6px; 
+            background: rgba(56, 189, 248, 0.25); 
+            border-radius: 4px; 
+            transition: height 0.05s ease, background 0.1s ease; 
+        }
+        .bar.active { 
+            background: linear-gradient(180deg, #67e8f9, #0284c7); 
+            box-shadow: 0 0 10px #38bdf8; 
+        }
+        .bar.speaking { 
+            background: linear-gradient(180deg, #86efac, #10b981); 
+            box-shadow: 0 0 10px #22c55e; 
+        }
+        .status-text { font-size: 14px; font-weight: 600; color: #cbd5e1; min-height: 20px; text-align: center; letter-spacing: 0.5px; }
+
+        /* Otsevestluse eelvaade */
+        .chat-card {
+            width: 100%;
+            max-width: 420px;
+            height: 115px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 16px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            margin: 2px 0 6px;
+        }
+        /* Vaegkuulja keritav subtiitrite vaade */
+        /* Elav subtiitririda: veel pooleli, seega veidi tuhmim + kursor */
+        .log-row.live .log-msg { opacity: 0.88; }
+        .log-row.live .log-msg::after {
+            content: '▌';
+            color: rgba(56,189,248,0.8);
+            animation: caretBlink 1s steps(1) infinite;
+            margin-left: 2px;
+        }
+        @keyframes caretBlink { 50% { opacity: 0; } }
+        .log-msg.msg-live-user { color: #cbd5e1; }
+        .log-msg.msg-live-maya { color: #7dd3fc; }
+
+        .chat-card {
+            max-height: 230px !important;
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+        }
+        .chat-card::-webkit-scrollbar {
+            width: 4px;
+            display: block !important;
+        }
+        .chat-card::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 4px;
+        }
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 12px;
+            background: #38bdf8;
+            margin-left: 3px;
+            vertical-align: baseline;
+            animation: blink 0.8s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .log-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; line-height: 1.4; }
+        .log-msg { max-width: 78%; word-break: break-word; }
+        .log-time { font-size: 11px; color: #64748b; font-family: monospace; }
+        .msg-user { color: #f8fafc; font-weight: 500; }
+        .msg-maya { color: #38bdf8; font-weight: 500; }
+
+        /* Sisend */
+        .input-row {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .text-input {
+            width: 100%;
+            background: rgba(18, 24, 38, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            border-radius: 24px;
+            padding: 11px 46px 11px 18px;
+            color: #f8fafc;
+            font-size: 14px;
+            outline: none;
+        }
+        .text-input:focus { border-color: #38bdf8; }
+        .text-input::placeholder { color: #64748b; }
+        .send-btn {
+            position: absolute;
+            right: 6px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: none;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .send-btn svg { width: 19px; height: 19px; fill: #38bdf8; }
+
+        /* Alumine juhtriba */
+        .bottom-bar {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+        }
+        .sub-btn-group { display: flex; gap: 12px; align-items: flex-start; }
+        .sub-btn-wrap { display: flex; flex-direction: column; align-items: flex-start; }
+        .sub-btn {
+            background: rgba(30, 41, 59, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+        .sub-btn-label { font-size: 8px; color: #64748b; line-height: 1.1; margin-top: 4px; }
+
+        .main-call-btn {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #22c55e, #15803d);
+            border: 2px solid rgba(34, 197, 94, 0.7);
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.45);
+            transition: all 0.3s ease;
+        }
+        .main-call-btn svg { width: 34px; height: 34px; fill: #ffffff; }
+        .main-call-btn.idle {
+            background: radial-gradient(circle at 35% 35%, #22c55e, #15803d);
+            border-color: rgba(34, 197, 94, 0.7);
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.45);
+        }
+        .main-call-btn.idle svg { fill: #ffffff; }
+        .main-call-btn.active {
+            background: radial-gradient(circle at 35% 35%, #ef4444, #b91c1c);
+            border-color: #fca5a5;
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.8);
+            transform: scale(1.04);
+            animation: callPulse 1.8s infinite;
+        }
+        .main-call-btn.active svg { fill: #ffffff; }
+
+        /* Modaalaknad (Logid, Kohandatud, Kõneseaded) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .modal-card {
+            width: 100%;
+            max-width: 400px;
+            max-height: 85vh;
+            background: #0f172a;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 18px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 12px 45px rgba(0,0,0,0.9);
+        }
+        .modal-title { font-size: 16px; font-weight: 800; color: #38bdf8; letter-spacing: 1px; }
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            background: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #cbd5e1;
+            max-height: 50vh;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+        .btn-modal {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-cancel { background: #334155; color: #e2e8f0; }
+        .btn-primary { background: #0284c7; color: #ffffff; }
+        .btn-share { background: #16a34a; color: #ffffff; }
+
+        @keyframes spinCW { 100% { transform: rotate(360deg); } }
+        @keyframes spinCCW { 100% { transform: rotate(-360deg); } }
+        @keyframes orbFloat { 0%, 100% { transform: translateY(0px) scale(var(--lvl, 1)); } 50% { transform: translateY(-6px) scale(var(--lvl, 1)); } }
+        @keyframes orbThink { 0% { transform: rotate(0deg) scale(var(--lvl, 1)); } 100% { transform: rotate(360deg) scale(var(--lvl, 1)); } }
+        @keyframes orbSpeak { 0%, 100% { transform: scale(calc(1.02 * var(--lvl, 1))); } 50% { transform: scale(calc(1.12 * var(--lvl, 1))); } }
+        @keyframes pulseGlow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.12); } }
+        @keyframes callPulse { 0%, 100% { box-shadow: 0 0 25px rgba(34, 197, 94, 0.6); } 50% { box-shadow: 0 0 45px rgba(34, 197, 94, 0.95); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+        /* Reaalajas kaameravideo - alati nähtav sõltumata orbi kõneolekust */
+        #cameraVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            z-index: 10 !important;
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        #cameraVideo.active-feed {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        .camera-badge {
+            position: absolute;
+            bottom: 12px;
+            padding: 2px 10px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #00ffff;
+            background: rgba(4, 15, 30, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            border-radius: 10px;
+            z-index: 20 !important;
+            display: none;
+            pointer-events: none;
+        }
+        .camera-badge.active-badge {
+            display: block !important;
+        }
+
+    
+        /* ELAV KÜBERNEETILINE SILM ORBI SEES */
+        .orb {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .eye-sclera {
+            width: 82%;
+            height: 82%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 50%, rgba(15, 30, 50, 0.95), rgba(4, 10, 20, 0.98));
+            box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            transition: opacity 0.3s ease;
+        }
+        .eye-iris {
+            width: 62%;
+            height: 62%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #00ffff, #0077ff 60%, #002255 100%);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.85), inset 0 0 10px rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            animation: irisGlow 4s ease-in-out infinite alternate;
+        }
+        .eye-pupil {
+            width: 44%;
+            height: 44%;
+            border-radius: 50%;
+            background: #020712;
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.95);
+        }
+        .eye-glint {
+            position: absolute;
+            top: 22%;
+            left: 26%;
+            width: 22%;
+            height: 22%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            filter: drop-shadow(0 0 3px #ffffff);
+            pointer-events: none;
+        }
+        .eye-lid {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: #040914;
+            z-index: 6;
+            transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+        .eye-lid.lid-top { top: 0; transform: translateY(-100%); }
+        .eye-lid.lid-bottom { bottom: 0; transform: translateY(100%); }
+        .orb.blinking .eye-lid.lid-top { transform: translateY(0%); }
+        .orb.blinking .eye-lid.lid-bottom { transform: translateY(0%); }
+
+        /* Kui kaamera on sees, peidetakse silm ja näidatakse videot */
+        .orb.camera-active .eye-sclera { opacity: 0 !important; }
+
+        @keyframes irisGlow {
+            0% { box-shadow: 0 0 18px rgba(0, 240, 255, 0.6); }
+            100% { box-shadow: 0 0 32px rgba(0, 240, 255, 0.95); }
+        }
+
+    
+        .telemetry-subtext {
+            font-size: 11px;
+            font-family: ui-monospace, monospace;
+            color: #64748b;
+            text-align: center;
+            margin-top: 3px;
+            min-height: 14px;
+            letter-spacing: 0.2px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-header">
+        <div class="title">MAYA LIVE</div>
+        <!-- Peamine ONLINE / OFFLINE toitenupp -->
+        <div class="live-tag" id="mainPowerBtn">
+            <div class="live-dot" id="connDot"></div>
+            <span id="connStatus">ONLINE</span>
+        </div>
+    </div>
+
+    <!-- Karakterite riba -->
+    <div class="persona-bar" id="personaBar">
+        <div class="persona-chip active" data-persona="asjalik">ASJALIK</div>
+        <div class="persona-chip" data-persona="sober">SÕBER</div>
+        <div class="persona-chip" data-persona="sarkastiline">SARKASTILINE</div>
+        <div class="persona-chip" data-persona="mentor">MENTOR</div>
+        <div class="persona-chip" data-persona="filosoof">FILOSOOF</div>
+        <div class="persona-chip" data-persona="treener">TREENER</div>
+        <div class="persona-chip" data-persona="zen">RAHULIK</div>
+        <div class="persona-chip" data-persona="romantiline">ROMANTILINE</div>
+        <div class="persona-chip" data-persona="custom" id="chipCustom">KOHANDATUD (+)</div>
+        <div class="persona-chip" data-persona="singer">LAULJA</div>
+    </div>
+
+    <!-- Häälevaliku sektsioon EEMALDATUD: nupud ei mõjutanud live-kõnet.
+         Live-seansi hääle määrab server (PrebuiltVoiceConfig). Muutuja
+         selectedVoice jääb alles, sest HTTP-vestluse tee kasutab seda. -->
+
+        <!-- Futuristlik Holograafiline Orb -->
+    <div class="orb-stage">
+        <div class="cyber-ring ring-1"></div>
+        <div class="cyber-ring ring-2"></div>
+        <div class="orb-outer-glow" id="orbGlow"></div>
+        <div class="orb" id="orb">
+            <!-- Elav silm -->
+            <div class="eye-lid lid-top"></div>
+            <div class="eye-sclera">
+                <div class="eye-iris">
+                    <div class="eye-pupil"></div>
+                    <div class="eye-glint"></div>
+                </div>
+            </div>
+            <div class="eye-lid lid-bottom"></div>
+            <!-- Reaalajas video -->
+            <video id="cameraVideo" autoplay playsinline muted></video>
+            <div class="camera-badge" id="cameraBadge">TAGA</div>
+        </div>
+    </div>
+
+    <!-- 40-ribaline reaalajas helinivoo indikaator -->
+    <div class="wave-section">
+        <div class="waves" id="waves"></div>
+        <div class="status-text" id="statusText">Kuulan sind...</div>
+        <!-- Algväärtus on neutraalne: päris jääk saabub serverist esimese
+             telemeetriapaketiga kohe seansi alguses. Varem oli siin
+             kõvakodeeritud "Jääk: 3.46 €", mis näitas vale numbrit. -->
+        <div id="liveTelemetry" class="telemetry-subtext">⏱ 00:00 • 0.0 MB • Jääk: –</div>
+    </div>
+
+    <!-- Ekraani reaalajas logi -->
+    <div class="chat-card" id="chatLog">
+        <div class="log-row"><span class="log-msg msg-maya">Maya: Olen valmis.</span><span class="log-time" id="initTime">--:--:--</span></div>
+    </div>
+
+    <!-- Tekstisisend -->
+    <div class="input-row">
+        <input type="text" id="textPrompt" class="text-input" placeholder="Kirjuta Mayale siia...">
+        <button class="send-btn" id="sendBtn">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+
+    <!-- Alumine riba: LOGID ja KÕNED + Suur mikrofoni nupp -->
+    <div class="bottom-bar">
+        <div class="sub-btn-group">
+            <div class="sub-btn-wrap">
+                <button class="sub-btn" id="btnLogid">LOGID</button>
+                <span class="sub-btn-label">kõnelogi failid</span>
+            </div>
+            <div class="sub-btn-wrap">
+                <button class="sub-btn" id="btnAudioRoute" style="border-color: #38bdf8; color: #38bdf8;">🔈 KUULAR</button>
+                <span class="sub-btn-label" id="lblAudioRoute">kuulari heli</span>
+            </div>
+            <div class="sub-btn-wrap">
+                <button class="sub-btn" id="btnKoned">KÕNED</button>
+                <span class="sub-btn-label">kõneseaded</span>
+            </div>
+        </div>
+
+        <button class="main-call-btn idle" id="mainCallBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+        </button>
+    </div>
+
+    <!-- MODAAL: LOGID JA EKSPORDI / JAGA VAADE -->
+    <div class="modal-overlay" id="logsModal">
+        <div class="modal-card">
+            <div class="modal-title">VESTLUSE JA KÕNEDE LOGID</div>
+            <div class="modal-body" id="fullLogView">Pole veel logisid salvestatud.</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnCloseLogs">SULGE</button>
+                <button class="btn-modal btn-primary" id="btnDownloadLog">SALVESTA .TXT</button>
+                <button class="btn-modal btn-share" id="btnShareLog">JAGA / SAADA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAAL: KÕNESEADED -->
+    <div class="modal-overlay" id="callsModal">
+        <div class="modal-card">
+            <div class="modal-title">SISSETULEVAD KÕNED JA HÄÄL</div>
+            <div class="modal-body">
+                <div style="white-space:normal;margin-bottom:14px;padding:11px;border:1px solid rgba(56,189,248,0.25);border-radius:12px;background:rgba(56,189,248,0.05);"><label style="display:block;font-size:12px;color:#38bdf8;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Reaalajas subtiitrid</label><div style="font-size:11px;color:#94a3b8;margin-bottom:9px;line-height:1.35;">Kõne ajal ekraanile kirjutatav tekst. Väljas olekus jääb heli ajastamisele rohkem arvutusaega.</div><button id="subtitleToggle" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px;color:#f8fafc;font-size:13px;outline:none;">Subtiitrid: SEES</button></div>
+                <!-- HOMMIKUBRIIFING -->
+                <div style="white-space:normal;margin-bottom:14px;padding:11px;border:1px solid rgba(56,189,248,0.25);border-radius:12px;background:rgba(56,189,248,0.05);">
+                    <label style="display:block;font-size:12px;color:#38bdf8;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Hommikubriifing</label>
+                    <div style="font-size:11px;color:#94a3b8;margin-bottom:9px;line-height:1.35;">Maya helistab ise: ilm, elektri hind, päeva kalender ja uued kirjad.</div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+                        <input type="time" id="briefingTime" value="08:00"
+                               style="flex:1;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:9px;color:#f8fafc;font-size:13px;outline:none;">
+                        <select id="briefingPersona"
+                               style="flex:1;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:9px;color:#f8fafc;font-size:13px;outline:none;">
+                            <option value="asjalik">Asjalik</option>
+                            <option value="sober">Sõber</option>
+                            <option value="sarkastiline">Sarkastiline</option>
+                            <option value="mentor">Mentor</option>
+                            <option value="treener">Treener</option>
+                            <option value="zen">Rahulik</option>
+                            <option value="singer">Laulja</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="briefingOn" style="flex:1;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.45);color:#4ade80;border-radius:10px;padding:9px;font-size:12px;font-weight:700;">SISSE</button>
+                        <button id="briefingOff" style="flex:1;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.4);color:#f87171;border-radius:10px;padding:9px;font-size:12px;font-weight:700;">VÄLJA</button>
+                        <button id="briefingPreview" style="flex:1;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;border-radius:10px;padding:9px;font-size:12px;font-weight:700;">PROOVI</button>
+                    </div>
+                    <div id="briefingStatus" style="font-size:11px;color:#64748b;margin-top:8px;min-height:14px;"></div>
+                </div>
+
+                <!-- VARUHÄÄL -->
+                <div style="white-space:normal;margin-bottom:14px;padding:11px;border:1px solid rgba(168,85,247,0.25);border-radius:12px;background:rgba(168,85,247,0.05);">
+                    <label style="display:block;font-size:12px;color:#c084fc;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Varuhääl</label>
+                    <div style="font-size:11px;color:#94a3b8;margin-bottom:9px;line-height:1.35;">Kui Maya krediit saab otsa või Google ei vasta, võtab varuhääl kõne üle ja ütleb, mis juhtus.</div>
+                    <button id="voiceTestBtn" style="width:100%;background:rgba(168,85,247,0.14);border:1px solid rgba(168,85,247,0.45);color:#c084fc;border-radius:10px;padding:10px;font-size:12px;font-weight:700;">KUULA VARUHÄÄLT</button>
+                    <div id="voiceTestStatus" style="font-size:11px;color:#64748b;margin-top:8px;min-height:14px;"></div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Märguande tüüp</label>
+                    <select id="callAlertModeSelect" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px;color:#f8fafc;font-size:13px;outline:none;">
+                        <option value="sound_and_vibration">Vibratsioon ja helin</option>
+                        <option value="vibration_only">Ainult vibratsioon</option>
+                        <option value="sound_only">Ainult helin</option>
+                        <option value="silent">Vaikne</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Kõnehelin (ainult sellele äpile)</label>
+                    <button type="button" id="btnPickRingtone" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px 14px;color:#f8fafc;font-size:13px;cursor:pointer;outline:none;text-align:left;">
+                        <span id="currentRingtoneLabel" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">Vaikimisi süsteemihelin</span>
+                        <span style="color:#38bdf8;font-size:12px;font-weight:600;margin-left:8px;">MUUDA</span>
+                    </button>
+                </div>
+                <div style="font-size:11px;color:#64748b;line-height:1.6;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+                    • Taustateenuse sissetulev kõne: AKTIIVNE<br>
+                    • Maya põhihääl: Google Aoede (Female)<br>
+                    • Mürasummutuse filter: 85Hz HighPass + Dynamic VAD<br>
+                    • Backend: seadistatav (vt gradle.properties -> mayaBaseUrl)
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnCloseCalls">SULGE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAAL: KOHANDATUD JUHIS -->
+    <div class="modal-overlay" id="customModal">
+        <div class="modal-card">
+            <div class="modal-title">Kohandatud Maya iseloom</div>
+            <textarea id="customText" style="width:100%;height:100px;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px;color:#f8fafc;font-size:13px;outline:none;resize:none;" placeholder="Kirjelda täpselt, kuidas Maya peaks rääkima..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnModalCancel">TÜHISTA</button>
+                <button class="btn-modal btn-primary" id="btnModalSave">SALVESTA</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer" style="display:none;"></audio>
+
+    <script>
+        // =============================================================
+        // MAYA BACKENDI AADRESSID — SEADISTATAVAD
+        // =============================================================
+        // Aadressid tulevad Androidi kihist (gradle.properties ->
+        // mayaBaseUrl -> BuildConfig -> AndroidBridge.getBaseUrls()).
+        // Vaikeväärtus 10.0.2.2 on Androidi emulaatori "arvuti ise".
+        // Brauseris testimisel kasutatakse sama hosti, kust leht tuli.
+        const MAYA_CFG = (function () {
+            var d = {
+                base: "http://10.0.2.2:8000",
+                alt: "http://10.0.2.2:8001",
+                vision: "http://10.0.2.2:8002"
+            };
+            try {
+                if (window.AndroidBridge && AndroidBridge.getBaseUrls) {
+                    var j = JSON.parse(AndroidBridge.getBaseUrls());
+                    d.base = j.base || d.base;
+                    d.alt = j.alt || d.alt;
+                    d.vision = j.vision || d.vision;
+                } else if (location.protocol.indexOf("http") === 0) {
+                    d.base = location.origin;
+                }
+            } catch (e) {
+                console.warn("MAYA_CFG: kasutan vaikeaadresse", e);
+            }
+            return d;
+        })();
+        const SERVER_URL = MAYA_CFG.base;
+                const WATCHER_URL = MAYA_CFG.alt;
+        
+        
+        function refreshCallSettingsUI() {
+            try {
+                if (window.AndroidBridge) {
+                    if (window.AndroidBridge.getAlertMode) {
+                        const mode = window.AndroidBridge.getAlertMode();
+                        const sel = document.getElementById('callAlertModeSelect');
+                        if (sel && mode) sel.value = mode;
+                    }
+                    if (window.AndroidBridge.getRingtoneTitle) {
+                        const title = window.AndroidBridge.getRingtoneTitle();
+                        const lbl = document.getElementById('currentRingtoneLabel');
+                        if (lbl && title) lbl.textContent = title;
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        window.onRingtoneSelected = function(title) {
+            const lbl = document.getElementById('currentRingtoneLabel');
+            if (lbl && title) lbl.textContent = title;
+        };
+
+        const alertSelect = document.getElementById('callAlertModeSelect');
+        if (alertSelect) {
+            alertSelect.addEventListener('change', function() {
+                if (window.AndroidBridge && window.AndroidBridge.setAlertMode) {
+                    window.AndroidBridge.setAlertMode(this.value);
+                }
+            });
+        }
+
+        const pickBtn = document.getElementById('btnPickRingtone');
+        if (pickBtn) {
+            pickBtn.addEventListener('click', function() {
+                if (window.AndroidBridge && window.AndroidBridge.openRingtonePicker) {
+                    window.AndroidBridge.openRingtonePicker();
+                }
+            });
+        }
+
+        const btnCallsElement = document.getElementById('btnCalls');
+        if (btnCallsElement) {
+            btnCallsElement.addEventListener('click', function() {
+                refreshCallSettingsUI();
+            });
+        }
+        setTimeout(refreshCallSettingsUI, 400);
+
+        const orb = document.getElementById('orb');
+        const statusText = document.getElementById('statusText');
+        const chatLog = document.getElementById('chatLog');
+        const mainCallBtn = document.getElementById('mainCallBtn');
+        const mainPowerBtn = document.getElementById('mainPowerBtn');
+        const connStatus = document.getElementById('connStatus');
+        const textPrompt = document.getElementById('textPrompt');
+        const sendBtn = document.getElementById('sendBtn');
+        const player = document.getElementById('audioPlayer');
+        const wavesContainer = document.getElementById('waves');
+
+        // Modaalid
+        const logsModal = document.getElementById('logsModal');
+        const callsModal = document.getElementById('callsModal');
+        const customModal = document.getElementById('customModal');
+        const fullLogView = document.getElementById('fullLogView');
+        const customText = document.getElementById('customText');
+
+        // 40 neoon-helinivoo riba
+        for (let i = 0; i < 40; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            wavesContainer.appendChild(bar);
+        }
+        const bars = document.querySelectorAll('.bar');
+
+        let audioCtx, analyser, biquadFilter, micStream, mediaRecorder, audioChunks = [];
+        let isSessionActive = false;
+        let isServerOnline = true;
+        let isSpeaking = false;
+        let silenceTimer = null;
+        let speechStarted = false;
+        
+        function sendPersonaUpdate(persona, customPrompt = '') {
+            if (typeof liveWs !== 'undefined' && liveWs && liveWs.readyState === WebSocket.OPEN) {
+                console.log('--> [LIVE WS]: Saadan reaalajas karakteri vahetuse:', persona);
+                liveWs.send(JSON.stringify({
+                    type: 'change_persona',
+                    persona: persona,
+                    custom_prompt: customPrompt
+                }));
+            }
+        }
+
+        let selectedPersona = localStorage.getItem('maya_persona') || 'asjalik';
+        let selectedVoice = localStorage.getItem('maya_voice') || 'maya';
+        let customPromptVal = localStorage.getItem('maya_custom_prompt') || '';
+
+        function getTime() {
+            const d = new Date();
+            return d.toTimeString().split(' ')[0];
+        }
+        function getDateStr() {
+            const d = new Date();
+            return d.toISOString().split('T')[0];
+        }
+        document.getElementById('initTime').innerText = getTime();
+
+        function vibrate(ms = 35) { if (navigator.vibrate) navigator.vibrate(ms); }
+
+        // Püsiv logide talletus mälus
+        function saveToPersistentLog(sender, text) {
+            const timeTag = `[${getDateStr()} ${getTime()}]`;
+            const entry = `${timeTag} ${sender}: ${text}\n`;
+            let stored = localStorage.getItem('maya_history_log') || '';
+            stored += entry;
+            localStorage.setItem('maya_history_log', stored);
+        }
+
+        
+    function typeWriterSync(element, fullText, totalDurationSec, callback) {
+        element.innerHTML = "";
+        const cursor = document.createElement("span");
+        cursor.className = "typing-cursor";
+        element.appendChild(cursor);
+
+        const words = fullText.split(" ");
+        let wordIndex = 0;
+        
+        // Kui heli pikkus on teada, jaotame sõnad ühtlaselt heli kestusele
+        const durationMs = Math.max(1000, (totalDurationSec || (words.length * 0.35)) * 1000);
+        const intervalTime = Math.max(30, Math.floor(durationMs / Math.max(1, words.length)));
+
+        const timer = setInterval(() => {
+            if (wordIndex < words.length) {
+                cursor.insertAdjacentText("beforebegin", (wordIndex > 0 ? " " : "") + words[wordIndex]);
+                wordIndex++;
+                const chatCard = document.getElementById("chatLog");
+                if (chatCard) chatCard.scrollTop = chatCard.scrollHeight;
+            } else {
+                clearInterval(timer);
+                cursor.remove();
+                if (callback) callback();
+            }
+        }, intervalTime);
+    }
+
+    
+        // Targa tagasihelistamise ja meeldetuletuse parser
+        function checkCallbackIntent(text) {
+            if (!text) return;
+            const lower = text.toLowerCase();
+            if (lower.includes("helista tagasi") || lower.includes("meeldetuletus") || lower.includes("tagasi helistan")) {
+                // Otsime minutite arvu
+                let match = lower.match(/(\d+)\s*(minut|min|sekund|sek)/);
+                let ms = 60000; // vaikimisi 1 minut
+                if (match) {
+                    let val = parseInt(match[1]);
+                    if (match[2].startsWith("sek")) ms = val * 1000;
+                    else ms = val * 60000;
+                }
+                appendLog("Süsteem", `Meeldetuletus / tagasihelistamine programmeeritud: ${ms / 1000} sekundi pärast.`);
+                setTimeout(() => {
+                    vibrate([200, 100, 200]);
+                    appendLog("Maya", "Siin on sinu tagasihelistamine / meeldetuletus!");
+                    if (typeof mainCallBtn !== "undefined" && mainCallBtn) {
+                        mainCallBtn.click();
+                    }
+                }, ms);
+            }
+        }
+
+        // === REAALAJAS SUBTIITRID ===
+        // Server saadab transkriptsiooni fragmentidena. Me EI tee iga fragmendi
+        // kohta uut rida, vaid täiendame sama rida kohapeal – nii tekib elav
+        // subtiitriefekt, mitte sadu ühesõnalisi ridu.
+        const liveRows = { user: null, assistant: null };
+
+        // Kas subtiitrid on sees. Vaikimisi jah; valik püsib localStorage's.
+        let subtitlesOn = localStorage.getItem('maya_subtitles') !== 'off';
+        let subPending = null;
+        const subState = { user: null, assistant: null };
+
+        // VIGA ENNE: renderTranscript kutsuti iga transkriptsioonifragmendi
+        // kohta (mõõdetud 388 korda 90 minutiga) ja tegi iga kord KAKS
+        // paigutust sundivat operatsiooni: innerText ja scrollHeight lugemise.
+        // Subtiitrid ja heli ajastamine jooksevad SAMAL põhilõimel, seega iga
+        // selline reflow lükkas heli ajastamist edasi ja sõi värinapuhvrit.
+        function flushSubtitles() {
+            subPending = null;
+            const chatLogEl = document.getElementById('chatLog');
+            if (!chatLogEl) return;
+            for (const role of ['user', 'assistant']) {
+                const st = subState[role];
+                if (!st || !st.dirty) continue;
+                st.dirty = false;
+                if (st.span) {
+                    const who = (role === 'user') ? 'Sina' : 'Maya';
+                    st.span.textContent = who + ': ' + (st.raw || '').trim();
+                }
+            }
+            const near = chatLogEl.scrollHeight - chatLogEl.scrollTop - chatLogEl.clientHeight < 60;
+            if (near) chatLogEl.scrollTop = chatLogEl.scrollHeight;
+        }
+
+        function renderTranscript(role, text, final) {
+            if (!subtitlesOn) return;
+            const chatLogEl = document.getElementById('chatLog');
+            if (!chatLogEl) return;
+
+            let row = liveRows[role];
+            if (!row) {
+                row = document.createElement('div');
+                row.className = 'log-row live';
+                const cls = (role === 'user') ? 'msg-live-user' : 'msg-live-maya';
+                row.innerHTML = '<span class="log-msg ' + cls + '"></span>'
+                              + '<span class="log-time">' + getTime() + '</span>';
+                chatLogEl.appendChild(row);
+                liveRows[role] = row;
+                subState[role] = { span: row.querySelector('.log-msg'), raw: '', dirty: false };
+            }
+            const st = subState[role]
+                || (subState[role] = { span: row.querySelector('.log-msg'), raw: '', dirty: false });
+
+            if (text) {
+                st.raw += text;
+                st.dirty = true;
+                if (!subPending) subPending = requestAnimationFrame(flushSubtitles);
+            }
+
+            if (final) {
+                flushSubtitles();
+                row.classList.remove('live');
+                const finished = (st.raw || '').trim();
+                liveRows[role] = null;
+                subState[role] = null;
+                if (finished && typeof saveToPersistentLog === 'function') {
+                    saveToPersistentLog(role === 'user' ? 'Sina' : 'Maya', finished);
+                }
+                if (!finished) row.remove();
+            }
+        }
+
+        function appendLog(sender, text) {
+            if (sender === "Maya" && typeof checkCallbackIntent === "function") {
+                checkCallbackIntent(text);
+            }
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            const msgClass = sender === 'Sina' ? 'msg-user' : 'msg-maya';
+            row.innerHTML = `<span class="log-msg ${msgClass}">${sender}: ${text}</span><span class="log-time">${getTime()}</span>`;
+            chatLog.appendChild(row);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            saveToPersistentLog(sender, text);
+        }
+
+        // Heliga sünkroonis reaalajas subtiitrite jooksutaja
+        function streamMayaSubtitles(text, audioElement) {
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            
+            const personaName = (selectedPersona || "asjalik").toUpperCase();
+            const prefix = selectedPersona === "asjalik" ? "Maya: " : `Maya [${personaName}]: `;
+            
+            row.innerHTML = `<span class="log-msg msg-maya"><strong>${prefix}</strong><span class="sub-text"></span><span class="typing-cursor"></span></span><span class="log-time">${getTime()}</span>`;
+            chatLog.appendChild(row);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            saveToPersistentLog(prefix.replace(":", ""), text);
+
+            const textSpan = row.querySelector('.sub-text');
+            const cursor = row.querySelector('.typing-cursor');
+            const words = text.split(" ");
+            let i = 0;
+
+            function startStream() {
+                // Arvutame sõnade vahe vastavalt tegelikule helipikkusele
+                const duration = (audioElement.duration && !isNaN(audioElement.duration) && audioElement.duration > 0.5) 
+                    ? audioElement.duration 
+                    : (words.length * 0.32);
+                
+                const msPerWord = Math.max(35, Math.floor((duration * 1000) / Math.max(1, words.length)));
+
+                const timer = setInterval(() => {
+                    if (i < words.length) {
+                        textSpan.textContent += (i > 0 ? " " : "") + words[i];
+                        i++;
+                        chatLog.scrollTop = chatLog.scrollHeight;
+                    } else {
+                        clearInterval(timer);
+                        if (cursor) cursor.remove();
+                    }
+                }, msPerWord);
+            }
+
+            if (audioElement.readyState >= 1) {
+                startStream();
+            } else {
+                audioElement.addEventListener('loadedmetadata', startStream, { once: true });
+                // Tagavara kui sündmus hilineb
+                setTimeout(() => { if (i === 0) startStream(); }, 300);
+            }
+        }
+
+        // Häälevaliku nupud on liidesest eemaldatud (ei mõjutanud live-kõnet).
+        // selectedVoice jääb defineerituks, sest HTTP-vestluse otspunktid
+        // (/api/chat_stream jt) saadavad selle endiselt kaasa.
+
+
+        // Karakterite klikid
+        document.querySelectorAll('.persona-chip').forEach(chip => {
+            const p = chip.getAttribute('data-persona');
+            if (p === selectedPersona) {
+                document.querySelectorAll('.persona-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                // Kiibirida keritakse horisontaalselt: ilma selleta võib valitud
+                // karakter jääda ekraanilt välja ja kasutaja ei näe, kes on aktiivne.
+                // Kerime AINULT siis, kui kiip on tegelikult serva taga, ja
+                // ainult nii palju, et see jääks täies ulatuses nähtavale.
+                // (getBoundingClientRect, sest offsetLeft on positsioneeritud
+                // esivanema suhtes, mitte kerimiskonteineri suhtes.)
+                requestAnimationFrame(() => {
+                    try {
+                        const row = chip.parentElement;
+                        if (!row || row.scrollWidth <= row.clientWidth) return;
+                        const c = chip.getBoundingClientRect();
+                        const r = row.getBoundingClientRect();
+                        const pad = 10;
+                        if (c.left < r.left + pad) {
+                            row.scrollLeft -= (r.left + pad - c.left);
+                        } else if (c.right > r.right - pad) {
+                            row.scrollLeft += (c.right - (r.right - pad));
+                        }
+                    } catch (e) {}
+                });
+            }
+            chip.addEventListener('click', () => {
+                vibrate(30);
+                if (p === 'custom') {
+                    customText.value = customPromptVal;
+                    customModal.style.display = 'flex';
+                } else {
+                    document.querySelectorAll('.persona-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    selectedPersona = p;
+                    localStorage.setItem('maya_persona', selectedPersona);
+                    sendPersonaUpdate(selectedPersona);
+                    const callRunning = (typeof liveWs !== 'undefined' && liveWs && liveWs.readyState === WebSocket.OPEN);
+                    appendLog('Maya', callRunning
+                        ? `Karakter valitud: ${chip.innerText} (jõustub järgmises kõnes)`
+                        : `Karakter valitud: ${chip.innerText}`);
+                }
+            });
+        });
+
+        // Modaalide loogika
+        document.getElementById('btnLogid').addEventListener('click', () => {
+            vibrate(30);
+            const history = localStorage.getItem('maya_history_log') || 'Logisid pole veel salvestatud.';
+            fullLogView.innerText = history;
+            logsModal.style.display = 'flex';
+        });
+        document.getElementById('btnCloseLogs').addEventListener('click', () => logsModal.style.display = 'none');
+
+        document.getElementById('btnKoned').addEventListener('click', () => {
+            vibrate(30);
+            callsModal.style.display = 'flex';
+            if (typeof loadBriefing === 'function') loadBriefing();
+        });
+        document.getElementById('btnCloseCalls').addEventListener('click', () => callsModal.style.display = 'none');
+
+        // === HOMMIKUBRIIFINGU HALDUS ===
+        async function loadBriefing() {
+            const st = document.getElementById('briefingStatus');
+            try {
+                const r = await fetch(`${SERVER_URL}/api/briefing`, { cache: 'no-store' });
+                const d = await r.json();
+                if (d.time) document.getElementById('briefingTime').value = d.time;
+                if (d.persona) document.getElementById('briefingPersona').value = d.persona;
+                st.innerText = d.enabled ? `Sees – iga päev kell ${d.time} (${d.persona})` : 'Praegu välja lülitatud';
+                st.style.color = d.enabled ? '#4ade80' : '#64748b';
+            } catch (e) { st.innerText = 'Serveriga ei saanud ühendust'; }
+        }
+        async function saveBriefing(enabled) {
+            const st = document.getElementById('briefingStatus');
+            const t = document.getElementById('briefingTime').value || '08:00';
+            const p = document.getElementById('briefingPersona').value || 'asjalik';
+            st.innerText = 'Salvestan...'; st.style.color = '#94a3b8';
+            try {
+                const r = await fetch(`${SERVER_URL}/api/briefing?time=${encodeURIComponent(t)}&persona=${encodeURIComponent(p)}&enabled=${enabled}`, { method: 'POST' });
+                const d = await r.json();
+                st.innerText = d.enabled ? `Sees – järgmine ${d.next}` : 'Välja lülitatud';
+                st.style.color = d.enabled ? '#4ade80' : '#64748b';
+                appendLog('Maya', d.enabled ? `Hommikubriifing seatud: ${d.next}` : 'Hommikubriifing välja lülitatud.');
+            } catch (e) { st.innerText = 'Salvestamine ebaõnnestus'; st.style.color = '#f87171'; }
+        }
+        // === VARUHÄÄLE PROOV ===
+        document.getElementById('voiceTestBtn').addEventListener('click', async () => {
+            vibrate(30);
+            const st = document.getElementById('voiceTestStatus');
+            st.innerText = 'Sünteesin...'; st.style.color = '#94a3b8';
+            try {
+                const r = await fetch(`${SERVER_URL}/api/voice_test`, { cache: 'no-store' });
+                if (!r.ok) { st.innerText = 'Varuhääl ei ole praegu saadaval'; st.style.color = '#f87171'; return; }
+                const buf = await r.arrayBuffer();
+                // Mängime SAMA heliahelaga, mida kasutab Maya kõnes (PCM 24 kHz)
+                if (!audioCtxOut || audioCtxOut.state === 'closed') { await initAudio(); }
+                playLiveChunk(buf);
+                st.innerText = `Mängin... (${(buf.byteLength/48000).toFixed(1)} s)`;
+                st.style.color = '#c084fc';
+            } catch (e) {
+                st.innerText = 'Proov ebaõnnestus: ' + e.message; st.style.color = '#f87171';
+            }
+        });
+
+        document.getElementById('briefingOn').addEventListener('click', () => { vibrate(30); saveBriefing(true); });
+        document.getElementById('briefingOff').addEventListener('click', () => { vibrate(30); saveBriefing(false); });
+        document.getElementById('briefingPreview').addEventListener('click', async () => {
+            vibrate(30);
+            const st = document.getElementById('briefingStatus');
+            st.innerText = 'Kogun andmeid...'; st.style.color = '#94a3b8';
+            try {
+                const r = await fetch(`${SERVER_URL}/api/briefing/preview`, { cache: 'no-store' });
+                const d = await r.json();
+                callsModal.style.display = 'none';
+                appendLog('Maya', 'Briifingu sisu praegu:\n' + (d.text || '-'));
+                st.innerText = '';
+            } catch (e) { st.innerText = 'Eelvaade ebaõnnestus'; st.style.color = '#f87171'; }
+        });
+
+        document.getElementById('btnModalCancel').addEventListener('click', () => customModal.style.display = 'none');
+        document.getElementById('btnModalSave').addEventListener('click', () => {
+            vibrate(40);
+            customPromptVal = customText.value.trim();
+            localStorage.setItem('maya_custom_prompt', customPromptVal);
+            selectedPersona = 'custom';
+            localStorage.setItem('maya_persona', 'custom');
+            sendPersonaUpdate('custom', customPromptVal);
+            document.querySelectorAll('.persona-chip').forEach(c => c.classList.remove('active'));
+            document.getElementById('chipCustom').classList.add('active');
+            customModal.style.display = 'none';
+            appendLog('Maya', 'Kohandatud juhis aktiveeritud.');
+        });
+
+        // Tekstifaili eksport ja jagamine
+        document.getElementById('btnDownloadLog').addEventListener('click', () => {
+            const data = localStorage.getItem('maya_history_log') || 'Tühi logi';
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `maya_vestlus_${getDateStr()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('btnShareLog').addEventListener('click', () => {
+            const data = localStorage.getItem('maya_history_log') || 'Tühi logi';
+            if (window.AndroidBridge && window.AndroidBridge.shareLogText) {
+                window.AndroidBridge.shareLogText(data);
+            } else if (navigator.share) {
+                navigator.share({ title: 'Maya vestluslogi', text: data }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(data);
+                alert("Logi kopeeritud lõikelauale!");
+            }
+        });
+
+        function setUIState(state, text) {
+            // VIGA ENNE: orb.className = "orb " + state kustutas iga kord
+            // 'camera-active' klassi – kaamera indikaator kadus kohe, kui Maya
+            // hakkas rääkima (playLiveChunk kutsub seda iga helipaketi peale).
+            // Nüüd säilitame kaameraoleku ja kirjutame DOM-i ainult siis, kui
+            // olek päriselt muutub.
+            const cam = orb.classList.contains('camera-active');
+            const want = "orb " + (state || "") + (cam ? " camera-active" : "");
+            if (orb.className !== want) orb.className = want;
+            if (text && statusText.innerText !== text) statusText.innerText = text;
+        }
+
+        // ONLINE / OFFLINE nupu haldus
+        function updateServerStatusUI(online) {
+            isServerOnline = online;
+            if (online) {
+                connStatus.innerText = "ONLINE";
+                mainPowerBtn.className = "live-tag";
+            } else {
+                connStatus.innerText = "OFFLINE";
+                mainPowerBtn.className = "live-tag offline";
+                isSessionActive = false;
+                mainCallBtn.className = "main-call-btn idle";
+                setUIState("offline", "Server on seisatud");
+            }
+        }
+
+        async function checkServerStatus() {
+            try {
+                const res = await fetch(`${WATCHER_URL}`, { method: 'GET' });
+                const data = await res.json();
+                const isUp = (data.maya_status === "active" || data.maya_status === "activating");
+                updateServerStatusUI(isUp);
+                return;
+            } catch (e) {}
+            try {
+                const res8000 = await fetch(`${SERVER_URL}/api/call_events`, { method: 'HEAD' });
+                updateServerStatusUI(res8000.status < 500);
+            } catch (e) {
+                updateServerStatusUI(false);
+            }
+        }
+
+        // ==========================================================
+        // === SALDO ÜHTNE OLEKUHALDUS (üks element, neli olekut) ===
+        // ==========================================================
+        // Kasutame TÄPSELT sama elementi (#liveTelemetry), mis on kõne ajal:
+        // sama paigutus, asukoht ja stiil. Uut UI-elementi EI looda.
+        //
+        // Neli olekut, üks ja sama tekstikonteiner:
+        //   1) käivitamine  -> salvestatud saldo kohe + server üle (HTTP)
+        //   2) ooterežiim   -> perioodiline HTTP värskendus
+        //   3) kõne ajal    -> reaalajas WebSocketi HUD
+        //   4) kõne järel   -> lõplik saldo jääb nähtavale ja salvestatakse
+        const BALANCE_STORE_KEY = 'maya_last_balance';
+        let lastLiveBalance = null;   // viimane kõne ajal nähtud saldo
+
+        function balanceElement() {
+            return document.getElementById("liveTelemetry");
+        }
+
+        // Ooterežiimi/kõnejärgne vorming – IDENTNE serveri omaga, et tekst
+        // ei hüppaks kõne alustamisel ega lõppemisel.
+        function idleHudFromBalance(bal, cur) {
+            const n = Number(bal);
+            if (!isFinite(n)) return null;
+            return `⏱ 00:00 • 0.0 MB • Jääk: ${n.toFixed(2)} ${cur || '€'}`;
+        }
+
+        // "⏱ 01:23 • 4.5 MB • Jääk: 2.96 €" -> { balance: 2.96, currency: '€' }
+        function parseBalanceFromHud(hud) {
+            const m = /Jääk:\s*([0-9]+(?:[.,][0-9]+)?)\s*(\S+)?/.exec(hud || '');
+            if (!m) return null;
+            const bal = parseFloat(m[1].replace(',', '.'));
+            if (!isFinite(bal)) return null;
+            return { balance: bal, currency: m[2] || '€' };
+        }
+
+        function saveBalanceSnapshot(bal, cur) {
+            const n = Number(bal);
+            if (!isFinite(n)) return;
+            try {
+                localStorage.setItem(BALANCE_STORE_KEY, JSON.stringify({
+                    balance: n, currency: cur || '€', saved_at: Date.now()
+                }));
+            } catch (e) {}
+        }
+
+        // Kuvab salvestatud saldo KOHE, ilma võrku ootamata. Nii ei näe kasutaja
+        // kunagi kõvakodeeritud algväärtust ega tühja välja – ka siis, kui
+        // server on parajasti kättesaamatu.
+        function applySavedBalance() {
+            try {
+                const raw = localStorage.getItem(BALANCE_STORE_KEY);
+                if (!raw) return false;
+                const snap = JSON.parse(raw);
+                const el = balanceElement();
+                const txt = idleHudFromBalance(snap.balance, snap.currency);
+                if (el && txt) {
+                    el.innerText = txt;
+                    const when = snap.saved_at ? new Date(snap.saved_at).toLocaleString('et-EE') : '?';
+                    el.title = `Viimati salvestatud saldo (${when})`;
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        // Olek 4: kõne lõppedes jäta lõplik saldo samasse kohta nähtavale ja
+        // salvesta see seadmesse, et see püsiks kuni järgmise seansini.
+        function persistFinalBalance() {
+            const el = balanceElement();
+            if (lastLiveBalance && isFinite(lastLiveBalance.balance)) {
+                saveBalanceSnapshot(lastLiveBalance.balance, lastLiveBalance.currency);
+                const txt = idleHudFromBalance(lastLiveBalance.balance, lastLiveBalance.currency);
+                if (el && txt) {
+                    el.innerText = txt;
+                    el.title = 'Lõppenud kõne lõppsaldo';
+                }
+            }
+            // Seejärel võrdleme serveri lõpliku arvestusega (save_session kirjutab
+            // jäägi faili alles kõne sulgemisel – seepärast kaks katset).
+            setTimeout(refreshIdleTelemetry, 800);
+            setTimeout(refreshIdleTelemetry, 3000);
+        }
+
+        // === OOTEREŽIIMI SALDO ===
+        // Enne kõnet ei ole WebSocketi seanssi, seega jääk tuli varem ainult
+        // kõne alustamisel ja liides näitas seni kõvakodeeritud algväärtust.
+        // Nüüd küsime päris jäägi serverist kohe käivitamisel, ooterežiimis
+        // perioodiliselt ja kohe pärast kõne lõppu.
+        async function refreshIdleTelemetry() {
+            // Kui live-seanss on avatud, siis saadab HUD-i server ise (WS) –
+            // ära kirjuta seansi jooksvat näitu ooteväärtusega üle.
+            if (typeof liveWs !== 'undefined' && liveWs && liveWs.readyState === WebSocket.OPEN) return;
+            const telEl = document.getElementById("liveTelemetry");
+            if (!telEl) return;
+            try {
+                const res = await fetch(`${SERVER_URL}/api/billing_state`, { cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.hud) {
+                    telEl.innerText = data.hud;
+                    telEl.title = `Seansse: ${data.total_sessions ?? '?'} • allikas: ${data.status}`;
+                    // Salvestame serveri autoriteetse saldo seadmesse
+                    saveBalanceSnapshot(data.current_balance, data.currency);
+                }
+            } catch (e) {
+                // Server pole kättesaadav – jätame viimase teadaoleva näidu alles
+            }
+        }
+
+        // Vajutus ONLINE / OFFLINE sildile
+        mainPowerBtn.addEventListener('click', async () => {
+            vibrate(50);
+            if (isServerOnline) {
+                if (confirm("Kas soovid Maya pilveserveri sulgeda (OFFLINE)?")) {
+                    appendLog('Maya', 'Sulgen serveri...');
+                    // P2: sulgemine käib watcher-teenuse kaudu (WATCHER_URL, port 8001),
+                    // nagu ka äratus. Varem saadeti POST ${SERVER_URL}/api/shutdown –
+                    // sellist marsruuti ei ole üheski teenuses olemas, 404 neelati tühja
+                    // catch'iga alla ja liides teatas 700 ms pärast valelikult "OFFLINE",
+                    // kuigi server töötas edasi.
+                    let stopOk = false;
+                    try {
+                        const res = await fetch(`${WATCHER_URL}/api/stop`, { method: 'POST' });
+                        stopOk = res.ok;
+                    } catch (e) {
+                        appendLog('Maya', 'Sulgemiskäsk ei jõudnud watcher-teenuseni.');
+                    }
+                    if (!stopOk) {
+                        appendLog('Maya', 'Serveri sulgemine EBAÕNNESTUS – kontrollin tegelikku olekut...');
+                    }
+                    // Olekut uuendame AINULT päris kontrolli põhjal, mitte oletusega
+                    setTimeout(async () => {
+                        await checkServerStatus();
+                        appendLog('Maya', isServerOnline
+                            ? 'Server on endiselt ONLINE (sulgemine ei õnnestunud).'
+                            : 'Server on nüüd OFFLINE.');
+                    }, 1200);
+                }
+            } else {
+                setUIState("thinking", "Käivitan serverit...");
+                appendLog('Maya', 'Äratuskäsk saadetud...');
+                try {
+                    const res = await fetch(`${WATCHER_URL}/api/wake`, { method: 'POST' });
+                    if (res.ok) {
+                        setTimeout(async () => {
+                            await checkServerStatus();
+                            if (isServerOnline) {
+                                appendLog('Maya', 'Server on taas ONLINE!');
+                                isSessionActive = true;
+                                mainCallBtn.className = "main-call-btn active";
+                                setUIState("listening", "Kuulan sind...");
+                                const ok = await initAudio();
+                                if (ok) startRecording();
+                            }
+                        }, 2500);
+                    }
+                } catch (e) {
+                    setUIState("offline", "Valvuri viga");
+                }
+            }
+        });
+
+        // Heli ahel mürasummutuse filtriga (HighPass 85Hz)
+        // ==========================================
+        // MAYA GEMINI LIVE NATIVE AUDIO WEBSOCKET
+        // ==========================================
+        let liveWs = null;
+        let audioCtxIn = null;
+        let audioCtxOut = null;
+        let liveProcessor = null;
+        let nextPlayTime = 0;
+        let isMayaSpeaking = false;
+
+        let pendingCallReason = null;
+
+        window.startLiveCallWithReason = async function(reason) {
+            console.log("--> [START LIVE CALL WITH REASON]:", reason);
+            pendingCallReason = reason;
+            if (typeof isSessionActive !== 'undefined' && !isSessionActive) {
+                isSessionActive = true;
+                const btn = document.getElementById('mainCallBtn');
+                if (btn) btn.className = "main-call-btn active";
+                await initAudio();
+            } else if (liveWs && liveWs.readyState === WebSocket.OPEN && pendingCallReason) {
+                const prompt = "Sulle helistati seoses meeldetuletusega: '" + pendingCallReason + "'. Ütle vahetult ja elavalt tere ning tuleta see teema lühidalt meelde, seejärel kuula vastust.";
+                liveWs.send(JSON.stringify({ type: "text", text: prompt }));
+                pendingCallReason = null;
+            }
+        };
+
+        async function initAudio() {
+            try {
+                if (audioCtxIn && audioCtxIn.state !== 'closed') {
+                    try { await audioCtxIn.close(); } catch(e){}
+                }
+                if (audioCtxOut && audioCtxOut.state !== 'closed') {
+                    try { await audioCtxOut.close(); } catch(e){}
+                }
+
+                audioCtxIn = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                audioCtxOut = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                await audioCtxIn.resume();
+                await audioCtxOut.resume();
+                // Kui riistvara ei toeta 24 kHz-i, annab Android muu sageduse
+                // ja iga 43 ms puhvrit resamplitakse eraldi – see kõlaks samuti
+                // raginana. Logime, et see hüpotees saaks kinnitatud või välistatud.
+                console.log("--> [HELI]: sisend " + audioCtxIn.sampleRate
+                    + " Hz, väljund " + audioCtxOut.sampleRate + " Hz");
+                nextPlayTime = audioCtxOut.currentTime;
+
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                const source = audioCtxIn.createMediaStreamSource(micStream);
+                analyser = audioCtxIn.createAnalyser();
+                analyser.fftSize = 128;
+                analyser.smoothingTimeConstant = 0.8;
+                source.connect(analyser);
+
+                liveProcessor = audioCtxIn.createScriptProcessor(2048, 1, 1);
+                source.connect(liveProcessor);
+                liveProcessor.connect(audioCtxIn.destination);
+
+                const wsProto = SERVER_URL.startsWith("https") ? "wss:" : "ws:";
+                const wsHost = SERVER_URL.replace(/^https?:\/\//, "");
+                const personaParam = encodeURIComponent(selectedPersona || "asjalik");
+                // KARAKTERITE ERALDATUS: kohandatud juhis kuulub AINULT nupule
+                // KOHANDATUD. Varem saatis äpp localStorage'i salvestatud juhise
+                // kaasa IGA karakteriga, mistõttu ASJALIK, FILOSOOF, ZEN jt said
+                // kõik sama iseloomu külge ja muutusid eristamatuks.
+                const customParam = (selectedPersona === "custom")
+                    ? encodeURIComponent(customPromptVal || "")
+                    : "";
+                liveWs = new WebSocket(`${wsProto}//${wsHost}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`);
+                liveWs.binaryType = "arraybuffer";
+
+                let liveVisionTimer = null;
+                liveWs.onopen = () => {
+                    console.log("--> [LIVE WS]: Ühendatud Maya Live serveriga!");
+                    sendPersonaUpdate(selectedPersona, selectedPersona === "custom" ? customPromptVal : "");
+                    if (pendingCallReason) {
+                        const prompt = "Sulle helistati seoses meeldetuletusega: '" + pendingCallReason + "'. Ütle vahetult ja elavalt tere ning tuleta see teema lühidalt meelde, seejärel kuula vastust.";
+                        console.log("--> [LIVE WS]: Saadan meeldetuletuse teksti Geminile:", prompt);
+                        liveWs.send(JSON.stringify({ type: "text", text: prompt }));
+                        pendingCallReason = null;
+                    }
+                    setUIState("listening", "Kuulan sind...");
+                    startAudioWatchdog();
+
+                    // Reaalajas kaamerakaadrite edastus otse Gemini seanssi
+                    liveVisionTimer = setInterval(() => {
+                        if (!isSessionActive || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+                        const v = document.getElementById("cameraVideo") || document.querySelector("video");
+                        if (!v || v.readyState < 2) return;
+                        try {
+                            // KAADRI MÕÕT: 768 px, mitte 480.
+                            // Gemini tükeldab pildid 768x768 plokkideks ja
+                            // üks plokk = 258 tokenit. Seega 768 px kostab
+                            // TÄPSELT SAMA kui 480 px, aga annab 2,5x rohkem
+                            // pikseleid. Varem jätsime pool resolutsiooni
+                            // niisama kasutamata.
+                            const cvs = document.createElement("canvas");
+                            cvs.width = 768;
+                            cvs.height = Math.round(v.videoHeight * (768 / v.videoWidth)) || 576;
+                            const ctx = cvs.getContext("2d");
+                            ctx.drawImage(v, 0, 0, cvs.width, cvs.height);
+                            // KVALITEET 0,85, mitte 0,5.
+                            // MÕÕDETUD 11.11.2026: serverisse jõudnud kaader
+                            // oli 480x480 ja 15 949 baiti = 0,069 baiti
+                            // piksli kohta. Loetav JPEG on 0,3-1,0. Sellel
+                            // tasemel kadus pimedamates kohtades sisu ära ja
+                            // Maya ütles "pime pilt ees". Tokenikulu EI MUUTU
+                            // (258 tokenit kaadri kohta sõltumata kvaliteedist).
+                            const b64 = cvs.toDataURL("image/jpeg", 0.85).split(",")[1];
+                            if (b64) {
+                                liveWs.send(JSON.stringify({ type: "image", data: b64 }));
+                            }
+                        } catch (imgErr) {
+                            console.error("Live kaadri viga:", imgErr);
+                        }
+                    }, 1500);
+                };
+
+                liveWs.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        playLiveChunk(event.data);
+                    } else if (typeof event.data === "string") {
+                        try {
+                            const pkt = JSON.parse(event.data);
+                            if (pkt.type === "state" && pkt.state) {
+                                // Server ütleb, mis parajasti toimub (nt tööriist töötab).
+                                setUIState(pkt.state, pkt.label || '');
+                                // Kolmas kaitsekiht: kui server on kuulamisrežiimis,
+                                // siis Maya voor on läbi ja mikrofon peab olema lahti.
+                                if (pkt.state === "listening") {
+                                    isSpeaking = false;
+                                }
+                            }
+                            if (pkt.type === "transcript") {
+                                renderTranscript(pkt.role, pkt.text || '', !!pkt.final);
+                            }
+                            // FAAS C: kasutaja segas vahele -> Maya vaikib KOHE.
+                            if (pkt.type === "interrupted") {
+                                const tCut = performance.now();
+                                stopLiveAudio();
+                                setUIState("listening", "Kuulan sind...");
+                                // MÕÕTMINE: tase iga kaadri kohta, aeg katkestuse suhtes
+                                try {
+                                    const jalg = rmsTrace.map(x =>
+                                        Math.round(x.t - tCut) + ":" + x.r.toFixed(4)).join(" ");
+                                    console.log("--> [VIIDE] katkestus, mikrofoni jälg (ms:tase) " + jalg);
+                                } catch (e) {}
+                            }
+                            // Server ei saa telefonist heli -> proovime
+                            // helikonteksti elustada (ekraan kustus vms).
+                            // Server tuvastas, et Gemini lõpetas vooru ilma
+                            // vastuseta. Varem jäi kasutaja lihtsalt vaikuse
+                            // ette (mõõdetud: ühel juhul 17,5 s ootamist).
+                            if (pkt.type === "no_reply") {
+                                console.warn("--> [LIVE WS]: Maya ei vastanud sellele voorule");
+                                appendLog('Maya', pkt.text || 'Vastust ei tulnud – proovi uuesti.');
+                                setUIState("listening", "Vastust ei tulnud – küsi uuesti");
+                            }
+                            if (pkt.type === "mic_stalled") {
+                                console.warn("--> [LIVE WS]: server ei saa mikrofonist heli");
+                                setUIState("listening", pkt.text || "Kontrollin mikrofoni...");
+                                reviveAudioContexts();
+                            }
+                            // Kõne lõppes serveripoolse põhjusega -> ütleme ausalt.
+                            if (pkt.type === "call_ended") {
+                                console.error("--> [LIVE WS]: kõne lõpetati:", pkt.text);
+                                // Gemini 1007/1011 on mööduv (21 korda 20 päeva
+                                // jooksul). Server hoiab taastamispiletit 90 s,
+                                // seega uuesti ühendudes jätkub kontekst.
+                                // AINULT ÜKS katse kõne kohta.
+                                if (pkt.recoverable && !autoResumeUsed && isSessionActive) {
+                                    autoResumeUsed = true;
+                                    appendLog('Maya', 'Ühendus katkes – taastan...');
+                                    setUIState("thinking", "Taastan ühendust...");
+                                    try { window.stopEverything(); } catch (e) {}
+                                    setTimeout(() => {
+                                        const b = document.getElementById('mainCallBtn');
+                                        if (b && !isSessionActive) {
+                                            console.warn("--> [LIVE WS]: automaatne taasühendus");
+                                            b.click();
+                                        }
+                                    }, 1200);
+                                } else {
+                                    appendLog('Maya', pkt.text || 'Kõne lõppes.');
+                                    setUIState("offline", "Kõne lõppes");
+                                }
+                            }
+                            if (pkt.type === "notice" && pkt.text) {
+                                // Serveri selgitav teade (nt karakterivahetus kõne ajal)
+                                appendLog('Maya', pkt.text);
+                            }
+                            if (pkt.type === "telemetry" && pkt.hud) {
+                                // Olek 3: kõne ajal kirjutab reaalajas HUD otse
+                                // samasse konteinerisse (sama element, sama koht).
+                                const telEl = document.getElementById("liveTelemetry");
+                                if (telEl) {
+                                    telEl.innerText = pkt.hud;
+                                    telEl.title = 'Reaalajas arvestus (kõne aktiivne)';
+                                }
+                                // Jätame viimase saldo meelde ja salvestame, et see
+                                // oleks olemas ka siis, kui kõne katkeb ootamatult.
+                                const parsed = parseBalanceFromHud(pkt.hud);
+                                if (parsed) {
+                                    lastLiveBalance = parsed;
+                                    saveBalanceSnapshot(parsed.balance, parsed.currency);
+                                }
+                            }
+                        } catch (err) {}
+                    }
+                };
+
+                liveWs.onclose = (ev) => {
+                    // DIAGNOSTIKA: sulgemiskood ütleb, MIKS kõne lõppes.
+                    // 1000 = korrektne sulgemine, 1001 = äpp läks taustale,
+                    // 1006 = ebanormaalne katkestus (võrk / WebView tapeti).
+                    const code = (ev && typeof ev.code !== 'undefined') ? ev.code : '?';
+                    const reason = (ev && ev.reason) ? ev.reason : '';
+                    const selgitus = ({
+                        1000: 'korrektne sulgemine',
+                        1001: 'äpp läks taustale või suleti',
+                        1005: 'koodi ei antud',
+                        1006: 'ebanormaalne katkestus (võrk/WebView)',
+                        1011: 'serveri viga'
+                    })[code] || 'tundmatu põhjus';
+                    console.log("--> [LIVE WS]: Ühendus suletud, kood", code, reason, selgitus);
+                    try {
+                        localStorage.setItem('maya_last_ws_close', JSON.stringify({
+                            code: code, reason: reason, selgitus: selgitus, at: Date.now()
+                        }));
+                    } catch (e) {}
+                    if (liveVisionTimer) {
+                        clearInterval(liveVisionTimer);
+                        liveVisionTimer = null;
+                    }
+                    if (isSessionActive) {
+                        appendLog('Maya', `Ühendus katkes: kood ${code} – ${selgitus}${reason ? ' (' + reason + ')' : ''}`);
+                        window.stopEverything();
+                    }
+                };
+
+                liveWs.onerror = (err) => {
+                    console.error("--> [LIVE WS VIGA]:", err);
+                };
+
+                liveProcessor.onaudioprocess = (e) => {
+                    if (!isSessionActive || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+
+                    // --- HELITASEME MÕÕTMINE (ainult diagnostika) --------
+                    // SIIN OLI VAREM KAJAVÄRAV. See on EEMALDATUD, sest
+                    // mõõtmine lükkas selle aluseks olnud eelduse ümber.
+                    //
+                    // Eeldus oli: Maya kaja jääb mikrofonis tugevalt alla
+                    // Peetri kõne taseme, seega saab need RMS-lävendiga
+                    // eristada. Peetri päris kõnest (07.11, 73 s) mõõdetud:
+                    //     kaja 95. protsentiil   0,0092
+                    //     kõne mediaan           0,0139
+                    //     kõne 10. protsentiil   0,0034
+                    // Jaotused KATTUVAD – lävendit, mis eraldaks kaja kõnest,
+                    // ei ole olemas. Iga lävend kas laseb kaja läbi või sööb
+                    // kõnet. Tagajärg oli tõsisem kui probleem, mida see
+                    // lahendama pidi: 77 raami (~10 s) Peetri kõnest visati
+                    // minema ja Gemini ei saanud 46 s jooksul ühtegi sõna.
+                    //
+                    // Kaja vastu töötab nüüd AINULT see, mis on selleks
+                    // mõeldud: Gemini enda neuraalne VAD (madal tundlikkus,
+                    // 300 ms eelpuhver, 800 ms vaikus – vt live_maya_ws.py)
+                    // ja WebView' kajasummutus. Need eristavad kõnet mürast
+                    // sisu, mitte valjuse järgi.
+                    //
+                    // Mõõtmine jääb alles, et tasemeid oleks edaspidi näha.
+                    let sumSq = 0;
+                    for (let i = 0; i < inputData.length; i++) sumSq += inputData[i] * inputData[i];
+                    const rms = Math.sqrt(sumSq / inputData.length);
+                    const audioAhead = (audioCtxOut && audioCtxOut.state !== "closed")
+                        ? (nextPlayTime - audioCtxOut.currentTime)
+                        : 0;
+                    if (audioAhead > 0.05) echoGateStats.rms.push(rms);
+
+                    // AJUTINE MÕÕTEVAHEND (vahelesegamise viide).
+                    // Hoiame viimase ~5 s mikrofonitasemed koos ajatempliga.
+                    // Kui server teatab katkestusest, trükime selle jälje
+                    // välja – nii NÄEME, millal kõne tegelikult algas, ilma
+                    // et peaksime mingit lävendit eeldama.
+                    // See EI summuta ega muuda ühtegi kaadrit.
+                    rmsTrace.push({ t: performance.now(), r: rms, a: audioAhead });
+                    if (rmsTrace.length > 45) rmsTrace.shift();
+
+                    echoGateStats.passed++;
+                    if (rms > 0.001) echoGateStats.speech.push(rms);
+                    const int16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        const s = Math.max(-1, Math.min(1, inputData[i]));
+                        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    liveWs.send(int16.buffer);
+                };
+
+                function runAudioVisualizer() {
+                    if (!analyser) return;
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    const orbElem = document.getElementById("orb");
+                    const glowElem = document.getElementById("orbGlow");
+                    const barElements = document.querySelectorAll(".bar");
+
+                    function draw() {
+                        // VIGA ENNE: kui isSessionActive oli veel false, siis
+                        // see väljus UUT KAADRIT PLANEERIMATA ja tsükkel suri
+                        // jäädavalt. Ja just nii juhtuski: kõnenupp kutsub
+                        // `await initAudio()` (mis käivitab selle tsükli) ja
+                        // alles SEEJÄREL `isSessionActive = true`. Esimene
+                        // draw() nägi false'i, lähtestas ribad ja lõpetas –
+                        // helinivoo ei liikunud terve kõne jooksul.
+                        // Nüüd lõpetame AINULT siis, kui heliahel on päriselt
+                        // maas (kõne lõpetatud), mitte lipu seisu pärast.
+                        if (!analyser || !audioCtxIn || audioCtxIn.state === "closed") {
+                            return;
+                        }
+                        requestAnimationFrame(draw);
+                        if (!isSessionActive) {
+                            barElements.forEach(b => {
+                                b.style.height = "6px";
+                                b.style.background = "rgba(56, 189, 248, 0.25)";
+                            });
+                            if (orbElem) orbElem.style.setProperty("--lvl", 1);
+                            return;
+                        }
+                        analyser.getByteFrequencyData(dataArray);
+
+                        let sum = 0;
+                        const step = Math.max(1, Math.floor(dataArray.length / barElements.length));
+
+                        for (let i = 0; i < barElements.length; i++) {
+                            const val = dataArray[i * step] || 0;
+                            sum += val;
+                            // Arvutame kõrguse vahemikus 6px kuni 38px
+                            const h = Math.max(6, Math.min(38, 6 + (val / 255) * 32));
+                            barElements[i].style.height = `${h}px`;
+                            if (val > 30) {
+                                barElements[i].style.background = "rgba(56, 189, 248, 0.9)";
+                                barElements[i].style.boxShadow = "0 0 8px rgba(56, 189, 248, 0.6)";
+                            } else {
+                                barElements[i].style.background = "rgba(56, 189, 248, 0.25)";
+                                barElements[i].style.boxShadow = "none";
+                            }
+                        }
+
+                        const avg = sum / (barElements.length || 1);
+                        const level = Math.min(1.35, 1 + (avg / 255) * 0.35);
+
+                        // Orbil on CSS-animatsioonid (orbFloat/orbSpeak/orbThink),
+                        // mis kõik animeerivad transform'i. CSS-animatsioon
+                        // kirjutab inline-stiili ÜLE, seega `style.transform`
+                        // ei jõudnud kunagi ekraanile. Anname taseme edasi
+                        // CSS-muutujana, mida keyframe'id ise kasutavad.
+                        if (orbElem) {
+                            orbElem.style.setProperty("--lvl", level.toFixed(3));
+                        }
+                        if (glowElem) {
+                            glowElem.style.opacity = Math.min(1, 0.3 + (avg / 150));
+                        }
+                    }
+                    draw();
+                }
+                runAudioVisualizer();
+                return true;
+            } catch (err) {
+                console.error("initAudio viga:", err);
+                setUIState("offline", "Mikrofoni tõrge");
+                return false;
+            }
+        }
+
+        // Kajaväravа lävend (RMS, skaalal 0..1). Päris kõne telefoni mikrofoni
+        // on tüüpiliselt 0,05...0,3; Maya kaja pärast WebView' kajasummutust
+        // jääb alla 0,02. Lävend 0,025 laseb tahtliku vahelesegamise läbi, aga
+        // peatab kaja. Kui Maya laused ikka katkevad, tõsta seda; kui Maya ei
+        // kuule enam vahelesegamist, langeta.
+        // Kõne ALGUSE tuvastus: kui tase hüppab järsult üle hinnangulise
+        // kajataseme, siis see EI OLE kaja – lase läbi, ükskõik mis lävend
+        // ütleb. Nii jääb tahtlik vahelesegamine tööle ka siis, kui Peeter
+        // räägib vaikselt.
+        let echoSilence = null;   // alles: vt mic_stalled varuvariant allpool
+        let rmsTrace = [];        // ajutine mõõtevahend, vt onaudioprocess
+        let echoGateStats = { suppressed: 0, passed: 0, rms: [], speech: [] };
+
+        // FAAS C, LEID 3: miks mikrofon üldse seisma jääb.
+        // Kõne ajal paneb lähedusandur ekraani kinni (PROXIMITY_SCREEN_OFF_
+        // WAKE_LOCK). Android WebView peatab siis sageli AudioContexti ja
+        // ScriptProcessorNode'i onaudioprocess (see on aegunud API ja töötab
+        // PÕHILÕIMEL, mida taustal piiratakse). Kaadrid lõpevad, Gemini ei
+        // saa 120 s jooksul sisendit ja sulgeb seansi koodiga 1008.
+        // audioCtxIn.resume() kutsuti varem AINULT initAudio's üks kord.
+        async function reviveAudioContexts() {
+            for (const ctx of [audioCtxIn, audioCtxOut]) {
+                if (ctx && ctx.state === "suspended") {
+                    try {
+                        await ctx.resume();
+                        console.warn("--> [HELI]: kontekst elustatud, olek =", ctx.state);
+                    } catch (e) {
+                        console.error("--> [HELI]: elustamine ebaõnnestus:", e);
+                    }
+                }
+            }
+        }
+
+        let audioWatchdogTimer = null;
+
+        function startAudioWatchdog() {
+            stopAudioWatchdog();
+            audioWatchdogTimer = setInterval(() => {
+                if (!isSessionActive) return;
+                if ((audioCtxIn && audioCtxIn.state === "suspended") ||
+                    (audioCtxOut && audioCtxOut.state === "suspended")) {
+                    reviveAudioContexts();
+                }
+            }, 3000);
+        }
+
+        function stopAudioWatchdog() {
+            if (audioWatchdogTimer) {
+                clearInterval(audioWatchdogTimer);
+                audioWatchdogTimer = null;
+            }
+        }
+
+        // Ekraani kustumine / äppi taustale minek ja tagasitulek.
+        document.addEventListener("visibilitychange", () => {
+            if (isSessionActive) reviveAudioContexts();
+        });
+
+        // FAAS C, LEID 1: ajastatud helitükid tuleb saada TÜHISTADA.
+        // Varem loodi iga tüki jaoks BufferSource, ajastati see nextPlayTime'i
+        // peale ja viide visati ära. Kui kasutaja vahele segas, oli kliendil
+        // mitu sekundit heli juba tulevikku ajastatud ja seda EI SAANUD enam
+        // peatada – Maya rääkis kasutajale peale. Nüüd hoiame viiteid.
+        let liveSources = [];
+        let liveGain = null;   // ühine helitugevuse sõlm pehmeks vaibumiseks
+        let autoResumeUsed = false;  // automaatne taasühendus ainult 1x kõne kohta
+        let fadeEndsAt = 0;    // AudioContexti aeg, mil vaibumine lõpeb
+
+        // Värinapuhver: kui palju heli hoitakse ette ajastatuna. 250 ms on
+        // piisav, et võrgu värin ei tekitaks auke, ja nii lühike, et vastuse
+        // algus ei tundu hilinevat. Tõstetud 250 -> 300 ms, sest liitmine
+        // kulutab osa varust (mõõdetud alatäitumised 0,63%).
+        const JITTER_BUFFER_S = 0.30;
+        // Kui ajastatud varu langeb alla selle, ehitame puhvri uuesti.
+        const MIN_LEAD_S = 0.02;
+        let audioStats = { chunks: 0, received: 0, underruns: 0, rebuffers: 0 };
+
+        // === TAASESITUSE TELEMEETRIA ===
+        // MIKS: server ei ole kunagi teadnud, millal heli telefonis PÄRISELT
+        // mängis. `playback_confirmed` oli serveris alati False ja iga
+        // latentsusnumber oli saatmisaeg, mitte kuuldud aeg.
+        //
+        // PÕHIMÕTTED:
+        //   * EI BLOKEERI: ainult loendurid, saatmine on ühekordne ja
+        //     toimub taasesituse LÕPUS, mitte selle ajal.
+        //   * monotoonne aeg: performance.now(), mitte Date.
+        //   * SISU EI LÄHE KAASA – ainult numbrid ja olekud.
+        //   * Gemini API-sse ei lisa see mitte ühtegi päringut.
+        let pbTel = null;
+        function pbReset() {
+            pbTel = { firstPlayed: null, lastPlayed: null,
+                      scheduledS: 0, playedS: 0, cancelled: false, sent: false };
+        }
+        pbReset();
+        function pbSend(reason) {
+            if (!pbTel || pbTel.sent) return;
+            if (pbTel.firstPlayed === null && !pbTel.cancelled) return;
+            pbTel.sent = true;
+            try {
+                if (liveWs && liveWs.readyState === WebSocket.OPEN) {
+                    liveWs.send(JSON.stringify({
+                        type: "playback",
+                        reason: reason,
+                        first_played_ms: pbTel.firstPlayed,
+                        last_played_ms: pbTel.lastPlayed,
+                        scheduled_s: Math.round(pbTel.scheduledS * 1000) / 1000,
+                        played_s: Math.round(pbTel.playedS * 1000) / 1000,
+                        underruns: audioStats.underruns,
+                        rebuffers: audioStats.rebuffers,
+                        chunks: audioStats.chunks,
+                        received: audioStats.received,
+                        cancelled: pbTel.cancelled,
+                        ctx_in_hz: audioCtxIn ? audioCtxIn.sampleRate : null,
+                        ctx_out_hz: audioCtxOut ? audioCtxOut.sampleRate : null,
+                        ctx_state: audioCtxOut ? audioCtxOut.state : null
+                    }));
+                }
+            } catch (e) { /* telemeetria ei tohi KUNAGI taasesitust segada */ }
+        }
+
+        // Kui pikalt hääl vaibub, kui kasutaja vahele segab. 120 ms on
+        // piisav, et kaoks klõps ja mulje oleks inimlik, kuid nii lühike,
+        // et see ei tundu venitamisena.
+        const FADE_OUT_MS = 120;
+
+        function stopLiveAudio(fade = true) {
+            // TELEMEETRIA: taasesitus TÜHISTATI (vahelesegamine või
+            // kõne lõpp). Erinevus `scheduled_s` ja `played_s` vahel
+            // näitab, kui palju Maya kõnet kasutaja EI KUULNUD.
+            if (pbTel && !pbTel.sent && pbTel.firstPlayed !== null) {
+                pbTel.cancelled = true;
+                pbSend("cancelled");
+            }
+            pbReset();
+            // Ootel tükid lähevad minema – neid ei tohi pärast katkestust
+            // enam mängima panna.
+            if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+            pendingChunks = []; pendingSamples = 0;
+            const ctx = audioCtxOut;
+            const sources = liveSources;
+            liveSources = [];
+            isSpeaking = false;
+
+            if (!ctx || ctx.state === "closed" || !sources.length) {
+                if (ctx && ctx.state !== "closed") nextPlayTime = ctx.currentTime;
+                for (const s of sources) { try { s.onended = null; s.stop(); } catch (e) {} }
+                return;
+            }
+
+            const now = ctx.currentTime;
+            if (fade && liveGain) {
+                // Lineaarne vaibumine nullini. exponentialRamp ei sobi, sest
+                // see ei tohi jõuda täpselt nulli.
+                try {
+                    liveGain.gain.cancelScheduledValues(now);
+                    liveGain.gain.setValueAtTime(liveGain.gain.value, now);
+                    liveGain.gain.linearRampToValueAtTime(0.0001, now + FADE_OUT_MS / 1000);
+                } catch (e) {}
+            }
+
+            // Allikad peatatakse PÄRAST vaibumist, muidu lõikaks ramp pooleli.
+            const stopAt = now + (fade ? FADE_OUT_MS / 1000 : 0);
+            let tulevikus = 0;
+            for (const s of sources) {
+                try { s.onended = null; } catch (e) {}
+                try { s.stop(stopAt); } catch (e) {
+                    try { s.stop(); } catch (e2) {}
+                }
+                // Tulevikku ajastatud allikad: stop(stopAt) peaks need spetsi
+                // järgi ära jätma, aga disconnect on kindel. See rida läks
+                // puhvrite ümberkirjutamisel kaduma ja ilma selleta võis
+                // ajastatud heli vahelesegamise järel edasi mängida.
+                try { s.disconnect(); tulevikus++; } catch (e) {}
+            }
+            console.log("--> [HELI]: vahelesegamine – peatasin " + tulevikus
+                + " ajastatud allikat, ootel tükke " + pendingSamples);
+            nextPlayTime = stopAt;
+            fadeEndsAt = stopAt;
+        }
+
+        // Mitu millisekundit heli liidetakse ÜHEKS puhvriks enne ajastamist.
+        // Gemini saadab 43 ms tükke -> 23 liitekohta sekundis. Iga liitekoht
+        // on potentsiaalne mikrokatkestus, sest start(t) ümardatakse lähima
+        // sämplini. Kõnes kuulmatu, pidevas laulunoodis kuuldav ragin.
+        // 150 ms koondab ~3,5 tükki üheks ja vähendab liitekohti 3,5x.
+        // Latentsust see ei lisa, sest värinapuhver hoiab niikuinii 250 ms ette.
+        const MERGE_MS = 150;
+        // Kui ajastatud varu langeb alla selle, lõpetame kogumise ja
+        // ajastame KOHE. Ilma selleta sööb liitmine värinapuhvrist 150 ms
+        // ära (mõõdetud: alatäitumised 0,1% -> 0,63%). Nii saame liitmise
+        // kasu siis, kui varu on, ja kiiruse siis, kui varu napib.
+        const LOW_LEAD_S = 0.12;
+        let pendingChunks = [];
+        let pendingSamples = 0;
+        let pendingTimer = null;
+
+        function flushPending() {
+            if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+            if (!pendingChunks.length || !audioCtxOut || audioCtxOut.state === "closed") {
+                pendingChunks = []; pendingSamples = 0;
+                return;
+            }
+            const total = pendingSamples;
+            const merged = new Float32Array(total);
+            let off = 0;
+            for (const c of pendingChunks) { merged.set(c, off); off += c.length; }
+            pendingChunks = []; pendingSamples = 0;
+            scheduleBuffer(merged);
+        }
+
+        function scheduleBuffer(float32) {
+            const sr = audioCtxOut.sampleRate;
+            const buffer = audioCtxOut.createBuffer(1, float32.length, sr);
+            buffer.getChannelData(0).set(float32);
+
+            const src = audioCtxOut.createBufferSource();
+            src.buffer = buffer;
+
+            if (!liveGain || liveGain.context !== audioCtxOut) {
+                liveGain = audioCtxOut.createGain();
+                liveGain.connect(audioCtxOut.destination);
+            }
+            if (audioCtxOut.currentTime >= fadeEndsAt) {
+                liveGain.gain.cancelScheduledValues(audioCtxOut.currentTime);
+                liveGain.gain.setValueAtTime(1, audioCtxOut.currentTime);
+            }
+            src.connect(liveGain);
+
+            const now = audioCtxOut.currentTime;
+            if (nextPlayTime < now + MIN_LEAD_S) {
+                if (nextPlayTime > 0 && nextPlayTime < now) audioStats.underruns++;
+                nextPlayTime = now + JITTER_BUFFER_S;
+                audioStats.rebuffers++;
+            }
+            // SÄMPLITÄPNE AJASTUS: ilma selleta langeb iga algus ujukoma-ajale
+            // sämplite vahele ja brauser ümardab -> alla poole sämpli nihe
+            // igal liitekohal, mis pidevas toonis kõlab raginana.
+            const startSample = Math.round(nextPlayTime * sr);
+            const startTime = startSample / sr;
+            src.start(startTime);
+            nextPlayTime = (startSample + buffer.length) / sr;
+            audioStats.chunks++;
+            liveSources.push(src);
+            // TELEMEETRIA: ajastatud kestus. See EI OLE mängitud kestus –
+            // vahe on just see, mida me mõõta tahame.
+            if (pbTel) pbTel.scheduledS += buffer.length / sr;
+            // Esimene PÄRISELT mängima hakkav tükk. `onended` ei sobi
+            // alguse mõõtmiseks, seega kasutame ajastatud algushetke ja
+            // AudioContexti kella vahet.
+            if (pbTel && pbTel.firstPlayed === null) {
+                const viide = Math.max(0, (startTime - audioCtxOut.currentTime) * 1000);
+                pbTel.firstPlayed = Math.round(performance.now() + viide);
+            }
+
+            src.onended = () => {
+                const i = liveSources.indexOf(src);
+                if (i !== -1) liveSources.splice(i, 1);
+                // TELEMEETRIA: PÄRISELT mängitud kestus ja viimane hetk.
+                if (pbTel) {
+                    pbTel.playedS += buffer.length / sr;
+                    pbTel.lastPlayed = Math.round(performance.now());
+                }
+                if (audioCtxOut.currentTime >= nextPlayTime - 0.05) {
+                    isSpeaking = false;
+                    setUIState("listening", "Kuulan sind...");
+                    // Järjekord on tühi -> taasesitus LÕPPES. Saadame
+                    // aruande siin, mitte taasesituse ajal.
+                    pbSend("completed");
+                    pbReset();
+                }
+            };
+        }
+
+        function playLiveChunk(arrayBuffer) {
+            isSpeaking = true;
+            setUIState("speaking", "Maya räägib...");
+
+            const int16 = new Int16Array(arrayBuffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) {
+                float32[i] = int16[i] / 32768.0;
+            }
+
+            pendingChunks.push(float32);
+            pendingSamples += float32.length;
+            audioStats.received++;
+
+            const sr = (audioCtxOut && audioCtxOut.sampleRate) || 24000;
+            const lead = (audioCtxOut && audioCtxOut.state !== "closed")
+                ? (nextPlayTime - audioCtxOut.currentTime)
+                : 0;
+            if (pendingSamples >= (MERGE_MS / 1000) * sr || lead < LOW_LEAD_S) {
+                flushPending();
+            } else if (!pendingTimer) {
+                // Varuväljapääs: voo lõpus ei pruugi lävend täituda, siis
+                // jääks saba ajastamata ja lause lõpp kaoks.
+                pendingTimer = setTimeout(flushPending, MERGE_MS);
+            }
+        }
+
+        function startRecording() {
+            // Live režiimis käib voog pidevalt initAudio kaudu
+        }
+
+        async function sendAudio(blob) {
+            isSpeaking = true;
+            setUIState("thinking", "Maya analüüsib...");
+            const fd = new FormData();
+            fd.append('file', blob, 'audio.webm');
+            try {
+                if (window.isCameraActive) {
+                    const vid = document.getElementById('cameraVideo');
+                    if (vid && vid.videoWidth > 0) {
+                        const snapCanvas = document.createElement('canvas');
+                        snapCanvas.width = vid.videoWidth;
+                        snapCanvas.height = vid.videoHeight;
+                        const ctx = snapCanvas.getContext('2d');
+                        ctx.drawImage(vid, 0, 0, snapCanvas.width, snapCanvas.height);
+                        const dataUrl = snapCanvas.toDataURL('image/jpeg', 0.85);
+                        const b64 = dataUrl.split(',')[1];
+                        if (b64) {
+                            fd.append('image', base64ToBlob(b64), 'snapshot.jpg');
+                            console.log('Reaalajas videokaader lisatud päringule!');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Viga kaadri püüdmisel:', err);
+            }
+            try {
+                if (window.AndroidBridge && window.AndroidBridge.getLatestMediaImageBase64) {
+                    let b64 = "";
+                    if (window.AndroidBridge.captureCameraSnapshotBase64) {
+                        b64 = '';
+                    } else if (window.AndroidBridge.getLatestMediaImageBase64) {
+                        b64 = window.AndroidBridge.getLatestMediaImageBase64();
+                    }
+                    if (b64 && b64.length > 50) {
+                        fd.append('image', base64ToBlob(b64), 'snapshot.jpg');
+                        console.log('Lisatud kaamera/meedia foto päringule!');
+                    }
+                }
+            } catch(e) { console.error('Pildi lisamise viga:', e); }
+            fd.append('persona', selectedPersona);
+                fd.append('voice', selectedVoice);
+            fd.append('voice', selectedVoice);
+            fd.append('custom_prompt', selectedPersona === 'custom' ? customPromptVal : '');
+            try { if (window.AndroidBridge) { const t = window.AndroidBridge.getSystemTelemetry ? window.AndroidBridge.getSystemTelemetry() : (window.AndroidBridge.getBatteryInfo ? window.AndroidBridge.getBatteryInfo() : ''); if (t) fd.append('device_telemetry', t); } } catch(e){}
+
+            try {
+                const res = await fetch(`${SERVER_URL}/api/chat_stream`, { method: 'POST', body: fd });
+                await handleResponse(res);
+            } catch (e) {
+                isSpeaking = false;
+                setUIState("", "Ühenduse tõrge");
+                if (isSessionActive && isServerOnline) startRecording();
+            }
+        }
+
+        async function sendTextPrompt(text) {
+            if (!text.trim() || !isServerOnline) return;
+            vibrate(30);
+            textPrompt.value = "";
+
+            // KÕNE AJAL: saadame teksti SAMASSE live-seanssi WebSocketi kaudu.
+            // Varem läks tekst alati /api/chat_stream'i ehk eraldi HTTP-vestlusse
+            // – kõne ajal kirjutades rääkisid sa tegelikult teise Mayaga, kes
+            // käimasolevast kõnest midagi ei teadnud. Server oskab {"type":"text"}
+            // paketti juba vastu võtta ja lisab selle ka kõne mällu.
+            if (typeof liveWs !== 'undefined' && liveWs && liveWs.readyState === WebSocket.OPEN) {
+                try {
+                    liveWs.send(JSON.stringify({ type: 'text', text: text }));
+                    appendLog('Sina', text);
+                    setUIState("thinking", "Maya mõtleb...");
+                    return;
+                } catch (e) {
+                    appendLog('Maya', 'Teksti saatmine kõnesse ebaõnnestus, proovin vestlusena.');
+                }
+            }
+
+            appendLog('Sina', text);
+            setUIState("thinking", "Maya mõtleb...");
+
+            try {
+                const fd = new FormData();
+                fd.append('text', text);
+                try {
+                    if (window.AndroidBridge && window.AndroidBridge.getLatestMediaImageBase64) {
+                        const b64 = window.AndroidBridge.getLatestMediaImageBase64();
+                        if (b64 && b64.length > 50) {
+                            fd.append('image', base64ToBlob(b64), 'snapshot.jpg');
+                        }
+                    }
+                } catch(e) {}
+                fd.append('persona', selectedPersona);
+                fd.append('custom_prompt', selectedPersona === 'custom' ? customPromptVal : '');
+            try { if (window.AndroidBridge) { const t = window.AndroidBridge.getSystemTelemetry ? window.AndroidBridge.getSystemTelemetry() : (window.AndroidBridge.getBatteryInfo ? window.AndroidBridge.getBatteryInfo() : ''); if (t) fd.append('device_telemetry', t); } } catch(e){}
+                const res = await fetch(`${SERVER_URL}/api/chat_stream`, { method: 'POST', body: fd });
+                await handleResponse(res);
+            } catch (e) {
+                setUIState("", "Tekstipäringu viga");
+            }
+        }
+
+        
+        function base64ToBlob(base64, mimeType = 'image/jpeg') {
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        function checkVisualTriggers(text) {
+            if (!text) return false;
+            const t = text.toLowerCase();
+            const triggers = ['vaata', 'mis see on', 'mis mul ees', 'loe pildilt', 'loe siit', 'ekraanilt', 'viimast pilti', 'pildil', 'foto'];
+            return triggers.some(k => t.includes(k));
+        }
+
+        let audioQueue = [];
+        let isAudioPlaying = false;
+        let isStreamFinished = false;
+
+        let currentAudioUrl = null;
+
+        function playNextSentenceAudio() {
+            if (audioQueue.length === 0) {
+                isAudioPlaying = false;
+                if (isStreamFinished) {
+                    isSpeaking = false;
+                    if (currentAudioUrl) {
+                        URL.revokeObjectURL(currentAudioUrl);
+                        currentAudioUrl = null;
+                    }
+                    if (isSessionActive && isServerOnline) {
+                        setUIState("listening", "Kuulan sind...");
+                        startRecording();
+                    } else {
+                        setUIState("", "Ootel");
+                    }
+                }
+                return;
+            }
+
+            isAudioPlaying = true;
+            isSpeaking = true;
+            const item = audioQueue.shift();
+
+            try {
+                setUIState("speaking", item.text.length > 32 ? item.text.slice(0, 32) + "..." : item.text);
+
+                if (window.AndroidBridge && window.AndroidBridge.playVoiceBase64) {
+                    
+        setInterval(() => {
+            if (isSpeaking && !isAudioPlaying && audioQueue.length === 0 && isSessionActive) {
+                console.warn("[Watchdog] isSpeaking jäi rippu, vabastan mikrofoni...");
+                isSpeaking = false;
+                setUIState("listening", "Kuulan sind...");
+                startRecording();
+            }
+        }, 3000);
+
+        window.onMayaAudioEnded = () => {
+                        playNextSentenceAudio();
+                    };
+                    window.AndroidBridge.playVoiceBase64(item.audio_base64);
+                } else {
+                    if (currentAudioUrl) {
+                        URL.revokeObjectURL(currentAudioUrl);
+                    }
+                    const blob = base64ToBlob(item.audio_base64, "audio/ogg; codecs=opus");
+                    currentAudioUrl = URL.createObjectURL(blob);
+                    player.src = currentAudioUrl;
+
+                    if (typeof streamMayaSubtitles === "function") {
+                        streamMayaSubtitles(item.text, player);
+                    }
+
+                    player.onended = () => {
+                        playNextSentenceAudio();
+                    };
+
+                    const playPromise = player.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.error("Player play viga:", e);
+                            setTimeout(playNextSentenceAudio, 100);
+                        });
+                    }
+                }
+            } catch(e) {
+                console.error("Audio esitamise viga:", e);
+                setTimeout(playNextSentenceAudio, 100);
+            }
+        }
+
+        async function handleResponse(res) {
+            audioQueue = [];
+            isAudioPlaying = false;
+            isStreamFinished = false;
+
+            if (res.status === 204) {
+                isSpeaking = false;
+                if (isSessionActive && isServerOnline) {
+                    setUIState("listening", "Kuulan sind...");
+                    startRecording();
+                } else {
+                    setUIState("", "Ootel");
+                }
+                return;
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let lineBuffer = "";
+
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    lineBuffer += decoder.decode(value, { stream: true });
+                    const lines = lineBuffer.split("\n");
+                    lineBuffer = lines.pop();
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed) continue;
+                        try {
+                            const data = JSON.parse(trimmed);
+                            if (data.type === "user_transcription") {
+                                if (data.text) appendLog("Sina", data.text);
+                            } else if (data.type === "action") {
+                                try {
+                                    if (window.AndroidBridge && window.AndroidBridge.executeNativeCommand) {
+                                        window.AndroidBridge.executeNativeCommand(data.payload);
+                                    }
+                                } catch(ae) {
+                                    console.error("Native action error:", ae);
+                                }
+                            } else if (data.type === "sentence") {
+                                if (data.audio_base64) {
+                                    audioQueue.push({
+                                        text: data.text || "",
+                                        audio_base64: data.audio_base64
+                                    });
+                                    if (!isAudioPlaying) {
+                                        playNextSentenceAudio();
+                                    }
+                                }
+                            } else if (data.type === "done") {
+                                isStreamFinished = true;
+                                if (!isAudioPlaying && audioQueue.length === 0) {
+                                    isSpeaking = false;
+                                    if (isSessionActive && isServerOnline) {
+                                        setUIState("listening", "Kuulan sind...");
+                                        startRecording();
+                                    } else {
+                                        setUIState("", "Ootel");
+                                    }
+                                }
+                            }
+                        } catch(parseErr) {
+                            console.error("NDJSON parsimise viga:", parseErr, trimmed);
+                        }
+                    }
+                }
+            } catch(streamErr) {
+                console.error("Stream reader viga:", streamErr);
+            } finally {
+                isStreamFinished = true;
+                if (!isAudioPlaying && audioQueue.length === 0) {
+                    isSpeaking = false;
+                    if (isSessionActive && isServerOnline) {
+                        setUIState("listening", "Kuulan sind...");
+                        startRecording();
+                    }
+                }
+            }
+        }
+
+                // === KÕNE ALUSTAMISE / LÕPETAMISE LOOGIKA ===
+        // Kaks parandust juhuslike katkestuste vastu:
+        //  A) isSessionActive seatakse alles PÄRAST seda, kui mikrofon on
+        //     tõesti avatud. Varem seati see enne initAudio()-t: kui mikrofoni
+        //     avamine ebaõnnestus, näitas liides aktiivset kõnet, kuid ühtegi
+        //     helipaketti ei saadetud (serveris 0 vooru) ja kasutaja vajutas
+        //     uuesti -> kõne "katkes".
+        //  B) Kõne nupp on lülitnupp ilma igasugust kaitset: teine vajutus
+        //     lõpetab kõne kohe. Kõrva/põse puude vastu telefonil on nüüd
+        //     lühike kaitseaken.
+        let callStartedAt = 0;
+        const HANGUP_GUARD_MS = 2500;
+
+        mainCallBtn.addEventListener('click', async (ev) => {
+            if (!isServerOnline) return;
+            // Programmiline .click() (automaatne taastamine) EI nulli lippu,
+            // muidu tekiks lõputu taasühendamise tsükkel.
+            if (ev && ev.isTrusted) autoResumeUsed = false;
+            vibrate(50);
+            if (!isSessionActive) {
+                mainCallBtn.className = "main-call-btn active";
+                setUIState("listening", "Kuulan sind...");
+                const ok = await initAudio();
+                if (!ok) {
+                    // Mikrofoni ei saanud – ÄRA tee näo, et kõne käib
+                    mainCallBtn.className = "main-call-btn idle";
+                    setUIState("", "Kõne ootel");
+                    appendLog('Maya', 'Mikrofoni avamine ebaõnnestus – kõnet ei alustatud.');
+                    return;
+                }
+                isSessionActive = true;
+                callStartedAt = Date.now();
+                // Lähedusandur sisse: kõrva ääres kustub ekraan, nii ei saa
+                // põsk kogemata kõne lõpetamise nuppu vajutada.
+                try { if (window.AndroidBridge && AndroidBridge.callStarted) AndroidBridge.callStarted(); } catch (e) {}
+                startRecording();
+            } else {
+                const elapsed = Date.now() - callStartedAt;
+                if (callStartedAt && elapsed < HANGUP_GUARD_MS) {
+                    appendLog('Maya', `Kõne algas just (${(elapsed/1000).toFixed(1)}s). Juhusliku vajutuse kaitse – vajuta veel kord, kui tahad päriselt lõpetada.`);
+                    callStartedAt = 0;   // järgmine vajutus lõpetab kohe
+                    return;
+                }
+                appendLog('Maya', 'Kõne lõpetatud nupuvajutusega.');
+                window.stopEverything();
+            }
+        });
+
+        window.stopEverything = function() {
+            // Pooleli subtiitriread lõpetatakse, et kursor ei jääks vilkuma
+            try {
+                ['user','assistant'].forEach(r => { if (liveRows[r]) renderTranscript(r, '', true); });
+            } catch (e) {}
+            // Lähedusandur välja – ekraan käitub jälle tavaliselt
+            try { if (window.AndroidBridge && AndroidBridge.callEnded) AndroidBridge.callEnded(); } catch (e) {}
+            // FAAS C: valvur seisma ja ajastatud heli maha, muidu räägib Maya
+            // edasi ka pärast toru hargile panemist (tulevikku ajastatud tükid).
+            stopAudioWatchdog();
+            stopLiveAudio();
+            // Kajaväravа statistika lävendi häälestamiseks (Chrome DevTools).
+            try {
+                const tot = echoGateStats.suppressed + echoGateStats.passed;
+                if (tot > 0) {
+                    console.log(`--> [KAJAVÄRAV]: summutatud ${echoGateStats.suppressed}`
+                        + ` / läbi ${echoGateStats.passed} raami`
+                        + ` (${(100 * echoGateStats.suppressed / tot).toFixed(1)}% summutatud)`);
+                }
+                const pct = (a, p) => {
+                    if (!a.length) return 0;
+                    const s2 = a.slice().sort((x, y) => x - y);
+                    return s2[Math.min(s2.length - 1, Math.floor(p * s2.length))];
+                };
+                if (echoGateStats.rms.length || echoGateStats.speech.length) {
+                    console.log("--> [KAJAVÄRAV] tasemed:"
+                        + " kaja mediaan " + pct(echoGateStats.rms, 0.5).toFixed(4)
+                        + ", kaja 95% " + pct(echoGateStats.rms, 0.95).toFixed(4)
+                        + " | kõne mediaan " + pct(echoGateStats.speech, 0.5).toFixed(4)
+                        + ", kõne 10% " + pct(echoGateStats.speech, 0.10).toFixed(4));
+                }
+                echoGateStats = { suppressed: 0, passed: 0, rms: [], speech: [] };
+                try {
+                    if (audioStats.chunks) {
+                        console.log("--> [HELI]: saabus " + audioStats.received
+                            + " tükki, ajastati " + audioStats.chunks + " puhvrit"
+                            + ", alatäitumisi " + audioStats.underruns
+                            + ", puhvri taastamisi " + audioStats.rebuffers);
+                    }
+                    audioStats = { chunks: 0, received: 0, underruns: 0, rebuffers: 0 };
+                } catch (e) {}
+            } catch (e) {}
+            if (liveWs) {
+                // Selge sulgemiskood -> serveri logi näitab üheselt, et kõne
+                // lõpetas kasutaja (varem tuli 1005 'koodi ei antud').
+                try { liveWs.close(1000, 'kasutaja lopetas kone'); } catch(e){}
+                liveWs = null;
+            }
+            if (liveProcessor) {
+                try { liveProcessor.disconnect(); } catch(e){}
+                liveProcessor = null;
+            }
+            if (audioCtxIn && audioCtxIn.state !== 'closed') {
+                try { audioCtxIn.close(); } catch(e){}
+                audioCtxIn = null;
+            }
+            if (audioCtxOut && audioCtxOut.state !== 'closed') {
+                try { audioCtxOut.close(); } catch(e){}
+                audioCtxOut = null;
+            }
+            isSessionActive = false;
+            isSpeaking = false;
+            if (typeof mainCallBtn !== 'undefined' && mainCallBtn) {
+                mainCallBtn.className = "main-call-btn idle";
+            }
+            if (typeof mediaRecorder !== 'undefined' && mediaRecorder) {
+                mediaRecorder.ondataavailable = null;
+                mediaRecorder.onstop = null;
+                if (mediaRecorder.state !== "inactive") {
+                    try { mediaRecorder.stop(); } catch (e) {}
+                }
+            }
+            if (typeof micStream !== 'undefined' && micStream) {
+                try {
+                    micStream.getTracks().forEach(track => track.stop());
+                } catch (e) {}
+                micStream = null;
+            }
+            if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state !== 'closed') {
+                try { audioCtx.suspend(); } catch (e) {}
+            }
+            if (typeof player !== 'undefined' && player) {
+                try { player.pause(); } catch (e) {}
+            }
+            if (window.AndroidBridge && typeof window.AndroidBridge.stopAudio === 'function') {
+                try { window.AndroidBridge.stopAudio(); } catch (e) {}
+            }
+            if (typeof setUIState === 'function') {
+                setUIState("", "Kõne ootel");
+                // Olek 4: varem tühjendati näidik kõne lõpus ära. Nüüd jääb
+                // lõplik saldo samasse kohta nähtavale ja salvestatakse seadmesse.
+                if (typeof persistFinalBalance === 'function') {
+                    persistFinalBalance();
+                }
+            }
+        };
+
+        sendBtn.addEventListener('click', () => sendTextPrompt(textPrompt.value));
+        textPrompt.addEventListener('keydown', e => { if (e.key === 'Enter') sendTextPrompt(textPrompt.value); });
+
+        window.addEventListener('load', async () => {
+            await checkServerStatus();
+            if (isServerOnline && !isSessionActive) {
+                setUIState("", "Kõne ootel");
+            }
+            setInterval(checkServerStatus, 8000);
+
+            // Olek 1: kõigepealt KOHE salvestatud saldo (ilma võrku ootamata),
+            // seejärel serveri autoriteetne väärtus üle.
+            applySavedBalance();
+            refreshIdleTelemetry();
+            // ...ja ooterežiimis värskendus iga 20 s; kõne ajal jääb vahele,
+            // sest siis saadab näidu server WebSocketi kaudu.
+            setInterval(refreshIdleTelemetry, 20000);
+        });
+    
+        // === NATIIVNE KUULARI JA KÕLARI HELISILD ===
+        window.isSpeakerMode = false;
+        window._lastMayaBlob = null;
+
+        const _origCreateObjURL = URL.createObjectURL.bind(URL);
+        URL.createObjectURL = function(obj) {
+            if (obj instanceof Blob) {
+                window._lastMayaBlob = obj;
+            }
+            return _origCreateObjURL(obj);
+        };
+
+        const btnAudioRoute = document.getElementById("btnAudioRoute");
+        const lblAudioRoute = document.getElementById("lblAudioRoute");
+        if (btnAudioRoute) {
+            btnAudioRoute.addEventListener("click", () => {
+                vibrate(30);
+                if (window.AndroidBridge && window.AndroidBridge.toggleSpeaker) {
+                    window.isSpeakerMode = window.AndroidBridge.toggleSpeaker();
+                } else {
+                    window.isSpeakerMode = !window.isSpeakerMode;
+                }
+                if (window.isSpeakerMode) {
+                    btnAudioRoute.textContent = "🔊 KÕLAR";
+                    btnAudioRoute.style.borderColor = "#22c55e";
+                    btnAudioRoute.style.color = "#22c55e";
+                    if (lblAudioRoute) lblAudioRoute.textContent = "valjuhääldi";
+                } else {
+                    btnAudioRoute.textContent = "🔈 KUULAR";
+                    btnAudioRoute.style.borderColor = "#38bdf8";
+                    btnAudioRoute.style.color = "#38bdf8";
+                    if (lblAudioRoute) lblAudioRoute.textContent = "kuulari heli";
+                }
+            });
+        }
+
+        if (typeof player !== "undefined" && player) {
+            const _origPlay = player.play.bind(player);
+            const _origPause = player.pause.bind(player);
+
+            player.play = async function() {
+                if (window.AndroidBridge && window.AndroidBridge.playVoiceBase64) {
+                    try {
+                        if (this.src && this.src.startsWith("data:")) {
+                            window.AndroidBridge.playVoiceBase64(this.src);
+                            return Promise.resolve();
+                        }
+                        const blobToPlay = window._lastMayaBlob || (this.src ? await (await fetch(this.src)).blob() : null);
+                        if (blobToPlay) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                window.AndroidBridge.playVoiceBase64(reader.result);
+                            };
+                            reader.readAsDataURL(blobToPlay);
+                            return Promise.resolve();
+                        }
+                    } catch (err) {
+                        console.error("Native audio bridge error:", err);
+                    }
+                }
+                return _origPlay();
+            };
+
+            player.pause = function() {
+                if (window.AndroidBridge && window.AndroidBridge.stopVoice) {
+                    window.AndroidBridge.stopVoice();
+                }
+                try { _origPause(); } catch (e) {}
+            };
+
+            window.onMayaAudioEnded = function() {
+                if (typeof player.onended === "function") {
+                    player.onended();
+                } else {
+                    player.dispatchEvent(new Event("ended"));
+                }
+            };
+        }
+    </script>
+
+<script>
+// Natiivse silla diskreetne juhtimine ilma UI-d koormamata
+function handleAgentNativeAction(text) {
+    if (!window.AndroidBridge) return;
+    const lower = text.toLowerCase();
+    
+    // Kui jutt käib YouTube'ist
+    if (lower.includes("youtube") && (lower.includes("ava") || lower.includes("pane") || lower.includes("mängi"))) {
+        let query = "";
+        const parts = lower.split(/youtube(?:'is|is)?/);
+        if (parts.length > 1) {
+            query = parts[1].replace(/käima|mängima|otsi|leia/g, "").trim();
+        }
+        window.AndroidBridge.openYouTube(query);
+    }
+}
+</script>
+
+
+<script>
+// ========================================================
+// REAALAJAS KAAMERAVOOG JA ŽESTID (ERILDI MOODULINA)
+// ========================================================
+window.isCameraActive = false;
+window.currentFacing = 'environment';
+window.cameraStream = null;
+
+async function startRealtimeCamera() {
+    try {
+        if (window.cameraStream) {
+            window.cameraStream.getTracks().forEach(t => t.stop());
+            window.cameraStream = null;
+        }
+        // 4:3, MITTE RUUT. Ruudu küsimine pani brauseri telefoni
+        // 4:3 / 16:9 sensorist servad maha lõikama, nii et "näita, mis
+        // toimub" kaotas poole vaateväljast. Kaadrisaatja arvutab
+        // kõrguse juba proportsioonist, seega mitteruut ei lõhu midagi.
+        // Suurem nõue valib tavaliselt ka parema sensorirežiimi, mis
+        // hämaras annab vähem müra. Tokenikulu ei muutu.
+        const constraints = {
+            video: {
+                facingMode: { ideal: window.currentFacing },
+                width: { ideal: 1280 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        };
+        window.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const v = document.getElementById('cameraVideo');
+        if (v) {
+            v.srcObject = window.cameraStream;
+            v.muted = true;
+            v.classList.add('active-feed');
+            v.style.display = 'block';
+            v.style.opacity = '1';
+            v.onpause = () => {
+                if (window.isCameraActive) {
+                    v.play().catch(() => {});
+                }
+            };
+            await v.play();
+        }
+        window.isCameraActive = true;
+        const orb = document.getElementById('orb');
+        if (orb) orb.classList.add('camera-active');
+        const badge = document.getElementById('cameraBadge');
+        if (badge) {
+            badge.innerText = (window.currentFacing === 'environment') ? 'TAGA' : 'EES';
+            badge.classList.add('active-badge');
+        }
+        console.log("Kaamera edukalt käivitatud!");
+    } catch (e) {
+        console.error("Kaamera viga:", e);
+        window.isCameraActive = false;
+        const orb = document.getElementById('orb');
+        if (orb) orb.classList.remove('camera-active');
+    }
+}
+
+function stopRealtimeCamera() {
+    if (window.cameraStream) {
+        window.cameraStream.getTracks().forEach(t => t.stop());
+        window.cameraStream = null;
+    }
+    const v = document.getElementById('cameraVideo');
+    if (v) {
+        v.srcObject = null;
+        v.classList.remove('active-feed');
+        v.style.display = 'none';
+        v.style.opacity = '0';
+    }
+    window.isCameraActive = false;
+    const orb = document.getElementById('orb');
+    if (orb) orb.classList.remove('camera-active');
+    const badge = document.getElementById('cameraBadge');
+    if (badge) badge.classList.remove('active-badge');
+    console.log("Kaamera suletud.");
+}
+
+async function toggleCameraFacing() {
+    if (!window.isCameraActive) return;
+    window.currentFacing = (window.currentFacing === 'environment') ? 'user' : 'environment';
+    const orb = document.getElementById('orb');
+    if (orb) {
+        orb.classList.add('flipping');
+        setTimeout(() => orb.classList.remove('flipping'), 350);
+    }
+    await startRealtimeCamera();
+}
+
+function handleOrbTap() {
+    if (window.isCameraActive) {
+        stopRealtimeCamera();
+    } else {
+        startRealtimeCamera();
+    }
+}
+
+// Orbi puute- ja viipekuulajad
+(function () {
+    const btn = document.getElementById('subtitleToggle');
+    if (!btn) return;
+    function paint() {
+        btn.textContent = 'Subtiitrid: ' + (subtitlesOn ? 'SEES' : 'VÄLJAS');
+        btn.style.borderColor = subtitlesOn ? 'rgba(56,189,248,0.6)' : 'rgba(148,163,184,0.3)';
+        btn.style.color = subtitlesOn ? '#38bdf8' : '#94a3b8';
+    }
+    btn.addEventListener('click', () => {
+        subtitlesOn = !subtitlesOn;
+        localStorage.setItem('maya_subtitles', subtitlesOn ? 'on' : 'off');
+        if (!subtitlesOn) {
+            for (const r of ['user', 'assistant']) {
+                if (liveRows[r]) { try { liveRows[r].remove(); } catch (e) {} liveRows[r] = null; }
+                subState[r] = null;
+            }
+        }
+        paint();
+    });
+    paint();
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const orb = document.getElementById('orb');
+    if (!orb) return;
+
+    let startX = 0, startY = 0, startTime = 0;
+    orb.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startTime = Date.now();
+        }
+    }, { passive: true });
+
+    orb.addEventListener('touchend', (e) => {
+        if (e.changedTouches && e.changedTouches[0]) {
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            const dt = Date.now() - startTime;
+
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) && dt < 500) {
+                if (window.isCameraActive) {
+                    toggleCameraFacing();
+                    return;
+                }
+            }
+
+            if (Math.abs(dx) < 20 && Math.abs(dy) < 20 && dt < 400) {
+                handleOrbTap();
+            }
+        }
+    }, { passive: true });
+
+    orb.addEventListener('click', () => {
+        if (!('ontouchstart' in window)) handleOrbTap();
+    });
+});
+</script>
+
+<script>
+// Loomulik silmapilgutus kui kaamera pole aktiivne
+function scheduleNaturalBlink() {
+    const orb = document.getElementById('orb');
+    if (!window.isCameraActive && orb) {
+        orb.classList.add('blinking');
+        setTimeout(() => {
+            orb.classList.remove('blinking');
+            if (Math.random() > 0.65) {
+                setTimeout(() => {
+                    orb.classList.add('blinking');
+                    setTimeout(() => orb.classList.remove('blinking'), 90);
+                }, 130);
+            }
+        }, 120);
+    }
+    setTimeout(scheduleNaturalBlink, 2600 + Math.random() * 3800);
+}
+setTimeout(scheduleNaturalBlink, 2000);
+</script>
+    <script src="calendar_module.js">
+
+
+
+function startVisionWatcher() {
+            
+    if (visionInterval) clearInterval(visionInterval);
+    
+    visionInterval = setInterval(async () => {
+        if (!isSessionActive || !isServerOnline || isSpeaking) return;
+
+        if (typeof isSessionActive !== 'undefined' && isSessionActive) return;
+        const videoElem = document.getElementById('cameraVideo') || document.querySelector('video');
+        if (!videoElem) return;
+
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+
+                const formData = new FormData();
+                formData.append('file', blob, 'frame.jpg');
+                formData.append('voice', 'mari');
+
+                try {
+                    
+                    const resp = await fetch(MAYA_CFG.vision + "/api/vision_check", {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data.status === 'comment' && data.audio_base64) {
+                            console.log('Maya nägi midagi:', data.text);
+                            if (typeof appendLog === 'function') appendLog('Maya (kaamera)', data.text);
+                            
+                            audioQueue.push({
+                                text: data.text || '',
+                                audio_base64: data.audio_base64
+                            });
+                            if (!isAudioPlaying) {
+                                playNextSentenceAudio();
+                            }
+                        }
+                    }
+                } catch (netErr) {}
+            }, 'image/jpeg', 0.6);
+
+        } catch (e) {
+            console.error('Vision frame error:', e);
+        }
+    }, 15000);
+}
+
+window.addEventListener('load', () => {
+    setTimeout(startVisionWatcher, 3000);
+});
+
+
+
+
+
+// --- MAYA AUTONOOMNE KAAMERA TAUSTAJÄLGIJA ---
+let isVisionBusy = false;
+let lastVisionCheckTime = 0;
+
+async function runAutonomousVisionCheck() {
+            
+    // Kui kaamera pole äpis sisse lülitatud või eelmine päring alles käib, jätame vahele
+    if (!window.isCameraActive || isVisionBusy) return;
+
+    const now = Date.now();
+    if (now - lastVisionCheckTime < 3500) return; // 3.5 sekundit ootust kaadrite vahel
+
+    const vid = document.getElementById('cameraVideo');
+    if (!vid || vid.videoWidth === 0) return;
+
+    try {
+        isVisionBusy = true;
+        const snapCanvas = document.createElement('canvas');
+        snapCanvas.width = 320;
+        snapCanvas.height = 240;
+        const ctx = snapCanvas.getContext('2d');
+        ctx.drawImage(vid, 0, 0, snapCanvas.width, snapCanvas.height);
+
+        snapCanvas.toBlob(async (blob) => {
+            if (!blob) {
+                isVisionBusy = false;
+                return;
+            }
+
+            console.log('[AUTONOMOUS VISION] Saadan kaadri serverisse...');
+            const fd = new FormData();
+            fd.append('file', blob, 'frame.jpg');
+            fd.append('voice', typeof selectedVoice !== 'undefined' ? selectedVoice : 'mari');
+
+            const targetUrl = MAYA_CFG.vision;
+
+            try {
+                
+                const resp = await fetch(targetUrl + '/api/vision_check', {
+                    method: 'POST',
+                    body: fd
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    lastVisionCheckTime = Date.now();
+                    
+                    if (data.status === 'comment' && data.audio_base64) {
+                        console.log('[AUTONOMOUS VISION] Maya kommentaar:', data.text);
+                        if (typeof appendLog === 'function') {
+                            appendLog('Maya (kaamera)', data.text);
+                        }
+                        
+                        if (typeof audioQueue !== 'undefined') {
+                            audioQueue.push({
+                                text: data.text || '',
+                                audio_base64: data.audio_base64
+                            });
+                            if (typeof isAudioPlaying !== 'undefined' && !isAudioPlaying && typeof playNextSentenceAudio === 'function') {
+                                playNextSentenceAudio();
+                            }
+                        }
+                    }
+                }
+            } catch (netErr) {
+                console.error('[AUTONOMOUS VISION] Võrgu viga:', netErr);
+            } finally {
+                isVisionBusy = false;
+            }
+        }, 'image/jpeg', 0.6);
+
+    } catch (e) {
+        console.error('[AUTONOMOUS VISION] Tõrge:', e);
+        isVisionBusy = false;
+    }
+}
+
+// Käivitame tsükli iga 1000ms järel kontrollima
+setInterval(runAutonomousVisionCheck, 1000);
+console.log('[AUTONOMOUS VISION] Süsteem käivitatud ja ootab kaamera aktiveerimist!');
+
+
+
+// Autonoomne visioonitöötlus otse HTML5 videost
+async function sendDirectCameraFrame() {
+            
+    if (!window.isCameraActive) return;
+    const v = document.getElementById('cameraVideo');
+    if (!v || v.videoWidth === 0) return;
+
+    if (window._isSendingFrame) return;
+    window._isSendingFrame = true;
+
+    try {
+        const snap = document.createElement('canvas');
+        snap.width = 320;
+        snap.height = 240;
+        const ctx = snap.getContext('2d');
+        ctx.drawImage(v, 0, 0, 320, 240);
+
+        snap.toBlob(async (blob) => {
+            if (!blob) {
+                window._isSendingFrame = false;
+                return;
+            }
+            try {
+                const fd = new FormData();
+                fd.append('file', blob, 'frame.jpg');
+                fd.append('voice', typeof selectedVoice !== 'undefined' ? selectedVoice : 'mari');
+
+                
+                const res = await fetch(MAYA_CFG.vision + '/api/vision_check', {
+                    method: 'POST',
+                    body: fd
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'comment' && data.audio_base64) {
+                        console.log('[MAYA NÄGI]:', data.text);
+                        if (typeof appendLog === 'function') appendLog('Maya', data.text);
+                        if (typeof audioQueue !== 'undefined') {
+                            audioQueue.push({ text: data.text || '', audio_base64: data.audio_base64 });
+                            if (typeof isAudioPlaying !== 'undefined' && !isAudioPlaying && typeof playNextSentenceAudio === 'function') {
+                                playNextSentenceAudio();
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[VISION PÄRINGU VIGA]:', err);
+            } finally {
+                window._isSendingFrame = false;
+            }
+        }, 'image/jpeg', 0.6);
+    } catch (e) {
+        window._isSendingFrame = false;
+    }
+}
+
+if (!window._visionIntervalSet) {
+    window._visionIntervalSet = true;
+    setInterval(sendDirectCameraFrame, 2500);
+}
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+let _lastVisionTime = 0;
+let _isVisionBusy = false;
+
+async function loopAutonomousVision() {
+    return; // MARI VISION CHECK TÄIELIKULT KEELATUD
+    // Kaamera kommenteerib AINULT siis, kui:
+    // 1. Kaamera on sees
+    // 2. Sina ei räägi (isSpeaking == false)
+    // 3. Maya ei räägi (isAudioPlaying == false ja järjekord on tühi)
+    // 4. Sessioon on aktiivne
+    const isMayaSilent = (!isAudioPlaying && (!audioQueue || audioQueue.length === 0));
+    
+    if (window.isCameraActive && !isSpeaking && isMayaSilent && !_isVisionBusy && typeof isSessionActive !== 'undefined' && isSessionActive) {
+        const now = Date.now();
+        if (now - _lastVisionTime > 3000) { // 6 sekundit intervall, et vestlusel oleks loomulik ruum
+            const vid = document.getElementById('cameraVideo');
+            if (vid && vid.videoWidth > 0) {
+                _isVisionBusy = true;
+                try {
+                    const snap = document.createElement('canvas');
+                    snap.width = 320;
+                    snap.height = 240;
+                    snap.getContext('2d').drawImage(vid, 0, 0, 320, 240);
+                    
+                    snap.toBlob(async (blob) => {
+                        if (!blob) { _isVisionBusy = false; return; }
+                        const fd = new FormData();
+                        fd.append('file', blob, 'frame.jpg');
+                        fd.append('voice', 'mari');
+                        const curPersona = (typeof activePersona !== "undefined" && activePersona) ? activePersona : ((typeof selectedPersona !== "undefined" && selectedPersona) ? selectedPersona : "asjalik");
+                        fd.append('persona', curPersona);
+                        try {
+                            
+                            const res = await fetch(`${SERVER_URL}/api/vision_check`, { method: 'POST', body: fd });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data && data.text) {
+                                    appendLog('Maya', data.text);
+                                }
+                                if (data && data.audio_base64) {
+                                    audioQueue.push({
+                                        text: data.text || "",
+                                        audio_base64: data.audio_base64
+                                    });
+                                    if (!isAudioPlaying) {
+                                        playNextSentenceAudio();
+                                    }
+                                }
+                            }
+                        } catch(e) {
+                            console.error("Vision fetch viga:", e);
+                        } finally {
+                            _isVisionBusy = false;
+                            _lastVisionTime = Date.now();
+                        }
+                    }, 'image/jpeg', 0.6);
+                } catch(e) {
+                    _isVisionBusy = false;
+                }
+            }
+        }
+    }
+    requestAnimationFrame(loopAutonomousVision);
+}
+setTimeout(() => { requestAnimationFrame(loopAutonomousVision); }, 2500);
+</script>
+
+</body>
+</html>
