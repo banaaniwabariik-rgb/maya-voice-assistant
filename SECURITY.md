@@ -7,7 +7,12 @@
 Kasuta GitHubi privaatset teatamist:
 **Security → Advisories → Report a vulnerability**
 
-Kui see ei ole võimalik, kirjuta hoidla omanikule privaatselt.
+Kui see ei ole võimalik, kirjuta hoidla haldajale privaatselt.
+
+> **Siin ei jookse ühtegi MAYA teenust.** Hoidla levitab lähtekoodi ja
+> APK-d; iga kasutaja käivitab backendi ise oma masinas. Seega ei ole
+> siin „tootmiskeskkonda", mille vastu testida — ja teade puudutab
+> alati koodi, mitte mingit töötavat paigaldust.
 
 Palun lisa:
 - mida sa tegid ja mis juhtus;
@@ -24,21 +29,45 @@ palun arvesta päevade, mitte tundidega.
 - Ära lisa issue'sse ega pull request'i päris API võtmeid, logisid ega
   vestluste sisu. Kui vajad näidet, asenda väärtused kohahoidjatega.
 
+## Mis kaitse ON olemas
+
+1. **Autentimine kõigil otspunktidel.** Iga `/api` otspunkt, SSE-vool
+   ja Gemini Live WebSocket nõuavad kehtivat tokenit. Paroolid on
+   soolatud `scrypt`-räsid, tokenitest hoitakse ainult SHA-256 räsi.
+2. **Kasutajate eraldatus failisüsteemi tasandil.** Iga kasutaja mälu,
+   meeldetuletused, vestlused ja seaded elavad **eraldi andmebaasis** —
+   üks kasutaja ei näe teise andmeid ega saa talle helistada.
+3. **Ühekordne WebSocketi pilet.** Pikaealine token ei jõua kunagi
+   URL-i: WebSocketi jaoks väljastatakse eraldi pilet, mis kehtib
+   60 sekundit ja ainult ühe ühenduse jaoks.
+4. **Kiiruspiirang** sisselogimisel, et paroole ei saaks jõuga murda.
+
+Täielik ülevaade: [docs/TURVALISUS.md](docs/TURVALISUS.md).
+
 ## Teadaolevad piirangud (ei ole „augud", vaid disainivalikud)
 
 Need on teadlikult sellised ja dokumenteeritud:
 
-1. **Backendil ei ole autentimist.** Projekt eeldab, et server elab
-   privaatvõrgus (Tailscale/WireGuard) või pöördproksi taga. Avalikku
-   internetti pandud MAYA on sisuliselt lahtine uks — vt README
-   turvahoiatust.
-2. **HTTP, mitte HTTPS.** Androidi klient räägib serveriga HTTP-s, sest
-   privaatvõrgus ei ole sertifikaate. HTTPS-i jaoks kasuta pöördproksit.
-3. **Andmebaas on krüpteerimata SQLite.** Mälufaktid ja vestlusarhiiv on
-   tavatekstina. Kui see on sulle oluline, kasuta krüpteeritud
+1. **HTTP ei ole krüpteeritud.** Vaikimisi räägib Androidi klient
+   serveriga HTTP-s, sest kohtvõrgus ei ole sertifikaate.
+   **Autentimine kaitseb volitamata kasutaja eest, mitte
+   pealtkuulamise eest.** Avalikku internetti minnes on **HTTPS/WSS
+   kohustuslik** — kasuta pöördproksit (nginx/Caddy). Rakendus ise
+   hoiatab, kui aadress on `http://` ja host ei ole kohtvõrgus.
+2. **Andmebaas on krüpteerimata SQLite.** Mälufaktid ja vestlusarhiiv
+   on tavatekstina. Kui see on oluline, kasuta krüpteeritud
    failisüsteemi.
-4. **Gemini API võti elab serveris.** Kes serverini pääseb, saab võtit
-   kasutada.
+3. **Gemini API võti elab serveris.** Kes serverini pääseb, saab võtit
+   kasutada. Võti ei ole kunagi APK-s ega jõua Androidi kliendini.
+4. **Registreerimine on vaikimisi avatud**, et esimene konto saaks
+   üldse tekkida. Pärast oma kontode loomist pane
+   `MAYA_ALLOW_REGISTRATION=0` või nõua `MAYA_INVITE_CODE`-i.
+5. **Vestluse sisu läheb Google'ile.** Hääle annab Gemini Live API —
+   kõne ja kaamerapilt liiguvad Google'i serveritesse ning kehtivad
+   Google'i tingimused. MAYA ei saa seda muuta.
+6. **APK on allkirjastatud Androidi debug-võtmega.** Hoidlas ei ole
+   ühtegi allkirjastamisvõtit. Püsipaigalduseks tee oma keystore —
+   vt [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Saladuste käsitlemine
 

@@ -116,14 +116,18 @@ faile ja sessioonifaile. **Jooksuta see enne iga pull request'i.**
 
 Head esimesed panused:
 
-- **Androidi kliendi autentimine.** Backendil ei ole autentimist; kui
-  kasutad pöördproksit Basic-autentimisega, ei oska klient päist saata.
+- **Pöördproksi oma autentimine.** Klient saadab juba
+  `Authorization: Bearer <token>` MAYA enda autentimise jaoks, nii et
+  pöördproksi Basic-autentimine satuks sellega vastuollu. Kui tahad
+  proksi tasandil lisakaitset, kasuta mTLS-i või IP-piirangut.
 - **Kulumudel ja püstkaadrid.** `LiveCostTracker` eeldab 258 tokenit
   kaadri kohta, aga püstpaigutuses kaader (768×1024) läheb kahe
   768×768 ploki eest.
 - **Kliendi taasesituse telemeetria** on olemas, aga `[AJAJOON]` rida
   trükitakse enne aruande saabumist, nii et väli on alati „teadmata".
-- **Mitme seadme tugi.** SSE jõuab kõigi klientideni; seadmehaldust ei ole.
+- **Seadmehaldus puudub.** Kõneteade jõuab fan-out'i kaudu kõigi sama
+  konto seadmeteni (vt [MITU_SEADET.md](MITU_SEADET.md)), aga seadmete
+  nimekirja, nimetamist ega valikulist väljalülitamist ei ole.
 - **`agent_memory.db`** oli originaalis olemas, aga ükski moodul seda ei
   kasuta (pärand vanemast Telegrami-botist). Avalikus koopias ei ole.
 - **HTTPS puudub.** Autentimine kaitseb volitamata kasutaja eest,
@@ -131,4 +135,4 @@ Head esimesed panused:
   [TURVALISUS.md](TURVALISUS.md)-s, aga sisseehitatud TLS-i ei ole.
 - **FCM / APNs puudub.** Kõneteated käivad SSE kaudu. Analüüs ja
   juhend, kui keegi tahab FCM-i lisada: [KONEALGATUS.md](KONEALGATUS.md).
-- **Kiuruspiirang on protsessipõhine.** `workers > 1` korrutab piirangu.
+- **Kiiruspiirang on protsessipõhine.** `workers > 1` korrutab piirangu.

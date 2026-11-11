@@ -1,0 +1,15 @@
+MAYA
+Copyright 2026 The MAYA Project contributors
+
+This product includes software developed as part of the MAYA project.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file
+for the full license text.
+
+MAYA uses Google Gemini Live as its voice engine but is not affiliated
+with, endorsed by, or sponsored by Google. Use of the Gemini API is
+governed by Google's own terms and pricing.
+
+MAYA does not bundle third-party source code. Its runtime dependencies
+are installed separately from PyPI and Maven Central and remain under
+their own licenses; see docs/SOLTUVUSED.md for the per-dependency list.

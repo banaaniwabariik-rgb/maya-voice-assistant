@@ -2,6 +2,38 @@
 
 Aitäh, et tahad MAYA-t paremaks teha.
 
+## Litsents ja panuse tingimused
+
+MAYA on **Apache License 2.0** all (vt [LICENSE](LICENSE)).
+
+Kui saadad pull request'i, tuleb **sinu panus sisse sama litsentsi
+all** — nii ütleb Apache-2.0 §5:
+
+> Unless You explicitly state otherwise, any Contribution
+> intentionally submitted for inclusion in the Work … shall be under
+> the terms and conditions of this License.
+
+Praktikas tähendab see:
+
+- **Sina jääd oma panuse autoriõiguse omanikuks.** Autoriõigust
+  kellelegi üle ei anta ja allkirjastatavat lepingut (CLA) praegu ei
+  nõuta.
+- Panust saates annad Apache-2.0 §2 ja §3 järgi **autoriõiguse- ja
+  patendiloa** kõigile, kes MAYA-t kasutavad.
+- **Saada ainult koodi, mille saatmiseks sul on õigus.** Ära kopeeri
+  teiste projektide koodi ilma litsentsi kontrollimata; eriti ära too
+  sisse GPL/AGPL koodi — see ei ühildu Apache-2.0 projektiga.
+- Kui tood sisse kolmanda osapoole koodi või varasid, **ütle PR-is
+  selgelt, mis need on ja mis litsentsi all**. Nõutud teated tuleb
+  alles hoida (`NOTICE`, failipäised).
+- Kui muudad olemasolevat faili oluliselt, ootab Apache-2.0 §4b, et
+  muudatus oleks tuvastatav. Git-ajalugu ja selge commit'i sõnum
+  katavad selle.
+
+Uue sõltuvuse lisamine on **eraldi arutelu teema**: ava enne issue ja
+ütle sõltuvuse litsents välja — vt
+[docs/SOLTUVUSED.md](docs/SOLTUVUSED.md).
+
 ## Enne kui alustad
 
 1. **Ava issue** ja kirjelda, mida tahad muuta. Nii väldime olukorda,
@@ -66,6 +98,12 @@ Testid on nelja liiki ja neid ei tohi omavahel segi ajada:
 
 ## Avalik projekt vs sinu enda paigaldus
 
-See hoidla on **sõltumatu avalik projekt**. Ükski siinne muudatus ei
-jõua automaatselt ühegi töötava eraparalduse sisse — iga paigaldaja
-otsustab ise, millal ja mida ta oma eksemplari uuendab.
+See hoidla on **sõltumatu avalik projekt** ja siin ei ole ühtegi
+jooksvat MAYA teenust: hoidla levitab lähtekoodi ja APK-d, backendi
+käivitab iga kasutaja ise.
+
+Ükski siinne muudatus **ei jõua automaatselt** ühegi töötava
+paigalduse sisse — ei hoidla haldaja omasse ega kellegi teise omasse.
+Iga paigaldaja otsustab ise, millal ja mida ta oma eksemplari uuendab.
+Vastupidine kehtib ka: eraparaldustes tehtud muudatusi siia
+automaatselt ei tule.

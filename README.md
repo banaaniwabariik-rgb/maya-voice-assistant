@@ -123,8 +123,10 @@ rakenduse parool (e-post).
 | [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md) | sõltuvused ja nende litsentsid |
 | [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm – arhitektuursed kaalutlused |
 | [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, panustamine |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada |
-| [SECURITY.md](SECURITY.md) | turvaaukude teatamine |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada ja mis litsentsi all panus sisse tuleb |
+| [SECURITY.md](SECURITY.md) | turvaaukude teatamine, olemasolev kaitse ja teadaolevad piirangud |
+| [LICENSE](LICENSE) | Apache License 2.0 täistekst |
+| [NOTICE](NOTICE) | autoriõiguse ja omistamise teade (Apache-2.0 §4d) |
 
 ---
 
@@ -188,19 +190,35 @@ kontrollitud, mitte telefonis läbi testitud. Soovi korral ehita ise.
 
 ---
 
-## ⚠️ Litsents on valimata
+## Litsents
 
-Sellel väljalaskekandidaadil **ei ole veel litsentsi** — vt
-[LITSENTS_OOTEL.md](LITSENTS_OOTEL.md). Ilma litsentsifailita kehtib
-vaikimisi „kõik õigused kaitstud", seega **hoidlat ei tohi veel
-avaldada** ja keegi ei saa koodi seaduslikult kasutada.
+MAYA on **Apache License 2.0** all — täistekst failis
+[LICENSE](LICENSE), autoriõiguse ja omistamise teade failis
+[NOTICE](NOTICE).
 
-Sõltuvused ei piira valikut: kõik kohustuslikud on lubavate
-litsentside all (MIT/BSD/Apache-2.0), ühtegi GPL/AGPL sõltuvust ei ole
-— vt [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md).
+Lühidalt, mida see lubab ja nõuab:
 
-Gemini Live kasutamisel kehtivad alati Google'i enda tingimused ja
-hinnakiri, sõltumata sellest, millise litsentsi sa valid.
+| | |
+|---|---|
+| Kasutamine, muutmine, levitamine | lubatud, ka ärilisel otstarbel |
+| Suletud lähtekoodiga toode | lubatud |
+| Muudatuste avaldamine | **ei ole** kohustuslik |
+| `LICENSE` ja `NOTICE` kaasa andmine | **kohustuslik** (§4a, §4d) |
+| Muudetud failide märkimine | **kohustuslik** (§4b) |
+| Patendiluba panustajatelt | **antakse** (§3) |
+| Nime „MAYA" kasutamine kaubamärgina | **ei anta** (§6) |
+| Garantii | **puudub** (§7, §8) |
+
+**Sõltuvused on eraldi.** MAYA ei sisalda ühtegi kolmanda osapoole
+lähtekoodi — sõltuvused paigaldatakse eraldi PyPI-st ja Maven
+Centralist ning nende peal kehtivad nende enda litsentsid. Täielik
+nimekiri ja üks tähelepanu vajav juht (`tld`, kaudne sõltuvus) on
+failis [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md).
+
+**Gemini Live ei kuulu selle litsentsi alla.** Hääle annab Google'i
+API ja selle kasutamisel kehtivad alati Google'i enda tingimused ning
+hinnakiri. MAYA ei ole Google'iga seotud ega tema poolt heaks
+kiidetud.
 
 ---
 
@@ -209,6 +227,12 @@ hinnakiri, sõltumata sellest, millise litsentsi sa valid.
 Paranduste ja ettepanekute jaoks on pull request'id teretulnud —
 vt [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Oluline märkus:** see avalik projekt on sõltumatu. Ükski avalik
-panus ei jõua automaatselt ühegi eraparalduse sisse. Iga MAYA
-paigaldaja otsustab ise, mida ta oma eksemplari üle kannab.
+Panus tuleb sisse **Apache-2.0 all** (§5) ja **sina jääd oma koodi
+autoriõiguse omanikuks** — allkirjastatavat lepingut (CLA) ei nõuta.
+Täpsemalt: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Oluline märkus:** see avalik projekt on sõltumatu ja siin ei jookse
+ühtegi MAYA teenust. Ükski avalik panus **ei jõua automaatselt** ühegi
+töötava paigalduse sisse — ei hoidla haldaja omasse ega kellegi teise
+omasse. Iga MAYA paigaldaja otsustab ise, mida ta oma eksemplari üle
+kannab.
