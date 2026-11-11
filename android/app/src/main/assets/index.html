@@ -645,6 +645,12 @@
       Server: <span id="mayaServerAddr"></span><br>
       Parool peab olema vähemalt 10 märki.
     </p>
+    <!-- Vale aadressi puhul peab kasutaja saama siit välja, mitte
+         jääma sisselogimisekraani taha kinni. -->
+    <button id="mayaServerBtn" style="
+            width:100%; padding:10px; margin-top:6px; border:0;
+            border-radius:10px; background:transparent; color:#7e8795;
+            font-size:13px;">Muuda serveri aadressi</button>
   </div>
 </div>
 
@@ -810,11 +816,23 @@
                         <span style="color:#38bdf8;font-size:12px;font-weight:600;margin-left:8px;">MUUDA</span>
                     </button>
                 </div>
+                <!-- MAYA SERVER. Aadressi EI OLE APK-s ette antud –
+                     kasutaja seadistab selle ise. Nupp avab natiivse
+                     seadistusekraani (ServerSetupActivity). -->
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Minu MAYA server</label>
+                    <button type="button" id="btnServerSettings" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px 14px;color:#f8fafc;font-size:13px;cursor:pointer;outline:none;text-align:left;">
+                        <span id="currentServerLabel" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">seadistamata</span>
+                        <span style="color:#38bdf8;font-size:12px;font-weight:600;margin-left:8px;">MUUDA</span>
+                    </button>
+                    <div id="serverWarn" style="font-size:11px;color:#fbbf24;margin-top:7px;line-height:1.4;"></div>
+                </div>
+
                 <div style="font-size:11px;color:#64748b;line-height:1.6;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
                     • Taustateenuse sissetulev kõne: AKTIIVNE<br>
                     • Maya põhihääl: Google Aoede (Female)<br>
                     • Mürasummutuse filter: 85Hz HighPass + Dynamic VAD<br>
-                    • Backend: seadistatav (vt gradle.properties -> mayaBaseUrl)
+                    • Backend: sinu enda server (vt „Minu MAYA server")
                 </div>
             </div>
             <div class="modal-actions">
@@ -839,34 +857,62 @@
 
     <script>
         // =============================================================
-        // MAYA BACKENDI AADRESSID — SEADISTATAVAD
+        // MAYA BACKENDI AADRESSID — KASUTAJA SEADISTAB ISE
         // =============================================================
-        // Aadressid tulevad Androidi kihist (gradle.properties ->
-        // mayaBaseUrl -> BuildConfig -> AndroidBridge.getBaseUrls()).
-        // Vaikeväärtus 10.0.2.2 on Androidi emulaatori "arvuti ise".
-        // Brauseris testimisel kasutatakse sama hosti, kust leht tuli.
+        // SIIN EI OLE ÜHTEGI VAIKEAADRESSI. Avalikus versioonis ei tohi
+        // rakendus ühenduda ühegi ette antud serveriga – iga kasutaja
+        // jooksutab oma backendi. Aadress tuleb Androidi kihist
+        // (ServerSetupActivity -> SharedPreferences ->
+        // AndroidBridge.getBaseUrls()).
+        //
+        // Brauseris testimisel kasutame sama hosti, kust leht tuli –
+        // see on sama server, mis lehe välja andis, mitte kolmas
+        // osapool.
+        //
+        // `ws` ja `sse` TULETATAKSE natiivkihis samast baasist, nii et
+        // https -> wss ja http -> ws käib automaatselt kaasa.
         const MAYA_CFG = (function () {
-            var d = {
-                base: "http://10.0.2.2:8000",
-                alt: "http://10.0.2.2:8001",
-                vision: "http://10.0.2.2:8002"
-            };
+            var d = { base: "", ws: "", sse: "", alt: "", vision: "",
+                      seadistatud: false };
             try {
                 if (window.AndroidBridge && AndroidBridge.getBaseUrls) {
                     var j = JSON.parse(AndroidBridge.getBaseUrls());
-                    d.base = j.base || d.base;
-                    d.alt = j.alt || d.alt;
-                    d.vision = j.vision || d.vision;
+                    d.base = j.base || "";
+                    d.ws = j.ws || "";
+                    d.sse = j.sse || "";
+                    d.alt = j.alt || "";
+                    d.vision = j.vision || "";
+                    d.seadistatud = !!j.seadistatud && !!d.base;
                 } else if (location.protocol.indexOf("http") === 0) {
                     d.base = location.origin;
+                    d.ws = d.base.replace(/^http/, "ws");
+                    d.sse = d.base;
+                    d.alt = d.base;
+                    d.vision = d.base;
+                    d.seadistatud = true;
                 }
             } catch (e) {
-                console.warn("MAYA_CFG: kasutan vaikeaadresse", e);
+                console.warn("MAYA_CFG: aadressi lugemine ebaõnnestus", e);
             }
+            // Kui natiivkiht andis ainult baasi (vanem ehitus), tuletame
+            // ülejäänu siin – ws/wss peab ALATI baasiga kooskõlas olema.
+            if (d.base && !d.ws) d.ws = d.base.replace(/^http/, "ws");
+            if (d.base && !d.sse) d.sse = d.base;
             return d;
         })();
         window.MAYA_CFG = MAYA_CFG;   // calendar_module.js loeb siit
         const SERVER_URL = MAYA_CFG.base;
+
+        // Ilma seadistatud serverita ei ürita me midagi laadida: saadame
+        // kasutaja natiivsele seadistusekraanile. MainActivity hoiab ära
+        // selle, et siia üldse satutaks, aga kui satume, ei vaikita.
+        if (!MAYA_CFG.base) {
+            console.warn("MAYA: serveri aadress on seadistamata");
+            try {
+                if (window.AndroidBridge && AndroidBridge.openServerSettings)
+                    AndroidBridge.openServerSettings();
+            } catch (e) { /* vaikne */ }
+        }
 
         // =============================================================
         // MAYA AUTENTIMINE
@@ -1009,10 +1055,17 @@
                 try {
                     var url = (typeof sisend === "string")
                         ? sisend : (sisend && sisend.url) || "";
-                    var meie = url.indexOf(MAYA_CFG.base) === 0 ||
-                               url.indexOf(MAYA_CFG.alt) === 0 ||
-                               url.indexOf(MAYA_CFG.vision) === 0 ||
-                               url.indexOf("/api/") === 0;
+                    // TÄHTIS: tühja aadressi vastu EI tohi võrrelda –
+                    // `"".indexOf("") === 0` on tõene IGA URL-i puhul ja
+                    // token läheks siis ka välistele teenustele.
+                    var omad = [MAYA_CFG.base, MAYA_CFG.alt,
+                                MAYA_CFG.vision].filter(function (p) {
+                        return !!p;
+                    });
+                    var meie = url.indexOf("/api/") === 0 ||
+                               omad.some(function (p) {
+                                   return url.indexOf(p) === 0;
+                               });
                     if (meie && url.indexOf("/api/auth/") < 0) {
                         valikud = valikud || {};
                         valikud.headers = MayaAuth.headers(valikud.headers);
@@ -1038,7 +1091,42 @@
                         if (lbl && title) lbl.textContent = title;
                     }
                 }
+                naitaServeriAadress();
             } catch(e) { console.error(e); }
+        }
+
+        // MINU MAYA SERVER. Näitame täpselt seda aadressi, mida päriselt
+        // kasutatakse – ja hoiatame, kui see on krüpteerimata HTTP.
+        function naitaServeriAadress() {
+            const lbl = document.getElementById('currentServerLabel');
+            const hoiatus = document.getElementById('serverWarn');
+            const base = (window.MAYA_CFG && MAYA_CFG.base) || "";
+            if (lbl) lbl.textContent = base || "seadistamata";
+            if (!hoiatus) return;
+            if (!base) {
+                hoiatus.textContent = "Serveri aadress on seadistamata – " +
+                    "vajuta MUUDA ja sisesta oma MAYA backendi aadress.";
+            } else if (base.indexOf("http://") === 0) {
+                hoiatus.textContent = "Ühendus on krüpteerimata (http). " +
+                    "Kohtvõrgus on see OK, avalikus internetis kasuta https.";
+            } else {
+                hoiatus.textContent = "";
+            }
+        }
+
+        naitaServeriAadress();
+
+        const serverBtn = document.getElementById('btnServerSettings');
+        if (serverBtn) {
+            serverBtn.addEventListener('click', function () {
+                if (window.AndroidBridge && window.AndroidBridge.openServerSettings) {
+                    window.AndroidBridge.openServerSettings();
+                } else {
+                    alert("Serveri aadressi saab muuta ainult Androidi " +
+                          "rakenduses. Brauseris kasutatakse seda hosti, " +
+                          "kust leht laeti.");
+                }
+            });
         }
 
         window.onRingtoneSelected = function(title) {
@@ -1760,8 +1848,17 @@
                 source.connect(liveProcessor);
                 liveProcessor.connect(audioCtxIn.destination);
 
-                const wsProto = SERVER_URL.startsWith("https") ? "wss:" : "ws:";
-                const wsHost = SERVER_URL.replace(/^https?:\/\//, "");
+                // WebSocketi aadress tuletatakse SAMAST baasist, mille
+                // kasutaja seadistas (natiivkihis ServerConfig.wsAadress:
+                // http -> ws, https -> wss). Nii ei saa WS sihtkoht
+                // HTTP API omast lahku minna.
+                const wsBase = MAYA_CFG.ws ||
+                      SERVER_URL.replace(/^http/, "ws");
+                if (!wsBase) {
+                    console.error("MAYA: WS aadress puudub – server on seadistamata");
+                    setUIState("idle", "Server on seadistamata");
+                    return;
+                }
                 const personaParam = encodeURIComponent(selectedPersona || "asjalik");
                 // KARAKTERITE ERALDATUS: kohandatud juhis kuulub AINULT nupule
                 // KOHANDATUD. Varem saatis äpp localStorage'i salvestatud juhise
@@ -1774,7 +1871,7 @@
                 // ei luba kohandatud päist. Ilma tokenita sulgeb server
                 // ühenduse koodiga 1008.
                 liveWs = new WebSocket(await MayaAuth.wsUrl(
-                    `${wsProto}//${wsHost}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`));
+                    `${wsBase}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`));
                 liveWs.binaryType = "arraybuffer";
 
                 let liveVisionTimer = null;
@@ -3427,7 +3524,8 @@ setTimeout(() => { requestAnimationFrame(loopAutonomousVision); }, 2500);
 
     async function kontrolliSisselogimist() {
         const a = document.getElementById("mayaServerAddr");
-        if (a) a.textContent = (window.MAYA_CFG && MAYA_CFG.base) || "?";
+        if (a) a.textContent = (window.MAYA_CFG && MAYA_CFG.base) ||
+                               "seadistamata";
         let st = { seadistatud: true, kutsekood_noutud: false };
         try { st = await MayaAuth.status(); } catch (e) { /* server maas */ }
         const alt = document.getElementById("mayaLoginAlt");
@@ -3480,6 +3578,13 @@ setTimeout(() => { requestAnimationFrame(loopAutonomousVision); }, 2500);
         const rb = document.getElementById("mayaRegisterBtn");
         if (lb) lb.addEventListener("click", () => teeLogin("login"));
         if (rb) rb.addEventListener("click", () => teeLogin("register"));
+        const sb = document.getElementById("mayaServerBtn");
+        if (sb) sb.addEventListener("click", function () {
+            if (window.AndroidBridge && window.AndroidBridge.openServerSettings)
+                window.AndroidBridge.openServerSettings();
+            else
+                viga("Serveri aadressi saab muuta Androidi rakenduses.");
+        });
         const pass = document.getElementById("mayaPass");
         if (pass) pass.addEventListener("keydown", (e) => {
             if (e.key === "Enter") teeLogin("login");

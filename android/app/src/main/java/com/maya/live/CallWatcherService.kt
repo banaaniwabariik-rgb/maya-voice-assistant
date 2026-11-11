@@ -73,6 +73,15 @@ class CallWatcherService : Service() {
                     // AUTENTIMINE: ilma tokenita vastab server 401 ja
                     // me ei ürita uuesti enne, kui kasutaja on
                     // rakenduses sisse loginud.
+                    // SERVERI AADRESS tuleb kasutaja seadistusest, mitte
+                    // ehitusaegsest konstandist. Kui kasutaja pole veel
+                    // seadistanud, EI võta me ühendust kuhugi.
+                    val base = ServerConfig.baasUrl(this@CallWatcherService)
+                    if (base.isEmpty()) {
+                        Log.d(TAG, "Serveri aadress puudub – ootan seadistust")
+                        Thread.sleep(10000)
+                        continue
+                    }
                     val token = getSharedPreferences(
                         MainActivity.MAYA_PREFS, Context.MODE_PRIVATE)
                         .getString(MainActivity.MAYA_TOKEN_KEY, "") ?: ""
@@ -81,7 +90,7 @@ class CallWatcherService : Service() {
                         Thread.sleep(10000)
                         continue
                     }
-                    val url = URL("${BuildConfig.MAYA_BASE_URL}/api/call_events")
+                    val url = URL("${ServerConfig.sseAadress(base)}/api/call_events")
                     conn = (url.openConnection() as HttpURLConnection).apply {
                         requestMethod = "GET"
                         readTimeout = 0

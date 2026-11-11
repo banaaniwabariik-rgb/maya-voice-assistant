@@ -123,31 +123,34 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ hashFiles('android/**/*.gradle', 'android/gradle/wrapper/gradle-wrapper.properties') }}
 
-      - name: Ehita debug APK
+      - name: Androidi unitestid (ServerConfig)
         working-directory: android
         run: |
           chmod +x gradlew
+          ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Ehita universaalne APK
+        working-directory: android
+        run: |
+          # ILMA -PmayaDefaultBaseUrl liputa: avalik APK ei tohi ühtegi
+          # backendi aadressi sisaldada.
           ./gradlew assembleDebug --no-daemon
 
-      - name: Kontrolli, et APK-s ei ole privaatseid aadresse
+      - name: Ehita release APK (kompileerimise kontroll)
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Kontrolli APK sisu
         run: |
-          APK=$(find android -name "*.apk" | head -1)
-          echo "APK: $APK"
-          unzip -p "$APK" assets/index.html > /tmp/apk_index.html
-          # Vaikimisi peab olema emulaatori aadress, mitte miski muu.
-          if grep -qE '(AIza|gsk_|sk-[0-9A-Za-z]{20,})' /tmp/apk_index.html; then
-            echo "::error::APK-s on API võtme muster!"
-            exit 1
-          fi
-          if ! grep -q "MAYA_CFG" /tmp/apk_index.html; then
-            echo "::error::MAYA_CFG puudub – aadress ei ole seadistatav"
-            exit 1
-          fi
-          echo "APK on puhas"
+          mkdir -p valjalase
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             valjalase/maya-universal.apk
+          python3 -m pip install --quiet --upgrade pip
+          python3 tests/tests_serveri_seadistus.py
 
       - name: Laadi APK üles
         uses: actions/upload-artifact@v4
         with:
-          name: maya-debug-apk
+          name: maya-universal-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14

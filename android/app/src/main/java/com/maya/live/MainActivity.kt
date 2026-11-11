@@ -56,10 +56,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val REQUEST_CODE_RINGTONE = 9901
+    private val REQUEST_CODE_SERVER_SETUP = 9902
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
+        // SERVERI SEADISTUS. Ilma aadressita ei ole midagi laadida:
+        // rakendus ei tohi vaikimisi ühendada ühegi serveriga.
+        if (requestCode == REQUEST_CODE_SERVER_SETUP) {
+            if (ServerConfig.onSeadistatud(this)) {
+                kaivitaRakendus()
+            } else {
+                Log.w("MAYA", "Serveri aadress jäi seadistamata – sulgen")
+                finishAndRemoveTask()
+            }
+            return
+        }
+
         if (requestCode == REQUEST_CODE_RINGTONE && resultCode == RESULT_OK) {
             val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
@@ -166,8 +180,36 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, missing.toTypedArray(), 101)
         } else {
-            loadApp()
-            startCallWatcher()
+            kaivitaRakendus()
+        }
+    }
+
+    /**
+     * Käivita rakendus – AGA ainult siis, kui kasutaja on oma backendi
+     * aadressi seadistanud.
+     *
+     * MIKS: avalikus versioonis ei ole ühtegi ette antud serveriaadressi
+     * (vt [ServerConfig]). Ilma aadressita pole mõtet WebView'd laadida
+     * ega taustavalvurit käivitada – kõik päringud kukuksid läbi ja
+     * kasutaja näeks ainult arusaamatuid vigu. Seetõttu avame kõigepealt
+     * seadistusekraani.
+     */
+    private fun kaivitaRakendus() {
+        if (!ServerConfig.onSeadistatud(this)) {
+            avaServeriSeadistus()
+            return
+        }
+        loadApp()
+        startCallWatcher()
+    }
+
+    private fun avaServeriSeadistus() {
+        try {
+            startActivityForResult(
+                Intent(this, ServerSetupActivity::class.java),
+                REQUEST_CODE_SERVER_SETUP)
+        } catch (e: Exception) {
+            Log.e("MAYA", "Seadistusekraani avamine ebaõnnestus", e)
         }
     }
 
@@ -297,7 +339,7 @@ class MainActivity : AppCompatActivity() {
                                 if (typeof initAudio === 'function') await initAudio();
                             }
                             const reason = "$escapedReason";
-                            const baseUrl = typeof SERVER_URL !== 'undefined' ? SERVER_URL : "${BuildConfig.MAYA_BASE_URL}";
+                            const baseUrl = typeof SERVER_URL !== 'undefined' ? SERVER_URL : "${ServerConfig.baasUrl(this)}";
                             console.log("Kõne vastuvõetud, laen tervituse...");
                             const res = await fetch(baseUrl + '/api/trigger_greeting?reason=' + reason);
                             if (res.status === 200) {
@@ -374,8 +416,7 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 101) {
-            loadApp()
-            startCallWatcher()
+            kaivitaRakendus()
         }
     }
 
@@ -385,19 +426,6 @@ class MainActivity : AppCompatActivity() {
 
         private var isTorchEnabled: Boolean = false
 
-        /**
-         * MAYA BACKENDI AADRESSID veebikihile.
-         *
-         * MIKS: varem olid aadressid index.html-is kõvakodeeritud ühe
-         * konkreetse serveri IP peale, mis tegi rakenduse teisele
-         * kasutajale kasutamatuks. Nüüd tuleb baas-URL
-         * `gradle.properties` -> `mayaBaseUrl` -> `BuildConfig`
-         * kaudu ja veebikiht küsib selle siit.
-         *
-         * `alt` ja `vision` tuletatakse baasist pordi vahetamisega;
-         * need teenused on VALIKULISED ja kui neid ei jookse, siis
-         * vastav funktsioon lihtsalt vaikib.
-         */
         /**
          * MAYA AUTENTIMISTOKEN.
          *
@@ -427,12 +455,34 @@ class MainActivity : AppCompatActivity() {
                 .edit().remove(MAYA_TOKEN_KEY).apply()
         }
 
+        /**
+         * MAYA BACKENDI AADRESSID veebikihile.
+         *
+         * MIKS: varem oli aadress APK-s kinni (`BuildConfig`), mis
+         * sidus ehituse ühe konkreetse serveriga ja tegi rakenduse
+         * teisele kasutajale kasutuks. Nüüd tuleb aadress kasutaja
+         * seadistusest ([ServerConfig]) ja veebikiht küsib selle siit.
+         *
+         * Tagastab `base`, `ws`, `sse`, `alt`, `vision` ja
+         * `seadistatud`. Kui kasutaja pole veel seadistanud, on
+         * aadressid TÜHJAD ja `seadistatud=false` – veebikiht ei tohi
+         * siis kuhugi ühendust võtta.
+         */
         @JavascriptInterface
-        fun getBaseUrls(): String {
-            val base = BuildConfig.MAYA_BASE_URL.trimEnd('/')
-            val alt = base.replace(Regex(":\\d+$"), ":8001")
-            val vision = base.replace(Regex(":\\d+$"), ":8002")
-            return """{"base":"$base","alt":"$alt","vision":"$vision"}"""
+        fun getBaseUrls(): String = ServerConfig.veebiJson(this@MainActivity)
+
+        /** Seadistatud aadress (tühi, kui seadistamata). */
+        @JavascriptInterface
+        fun getServerUrl(): String = ServerConfig.baasUrl(this@MainActivity)
+
+        /**
+         * Ava serveri seadistamise ekraan rakenduse seadetest.
+         * Pärast salvestamist laetakse veebikiht uuesti, et uus aadress
+         * jõuaks kõikidesse päringutesse ja WebSocketi URL-i.
+         */
+        @JavascriptInterface
+        fun openServerSettings() {
+            runOnUiThread { avaServeriSeadistus() }
         }
 
         @JavascriptInterface

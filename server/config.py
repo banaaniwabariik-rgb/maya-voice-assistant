@@ -202,10 +202,11 @@ def connect(timeout: float = 10, tee: Optional[str] = None):
 HOST = env("MAYA_HOST", "0.0.0.0")
 PORT = int(env("MAYA_PORT", "8000"))
 
-# Avalik baas-URL, mille kaudu Androidi rakendus serverini jõuab.
-# Androidi emulaatoris on arvuti ``10.0.2.2``. Päris telefoni puhul
-# pane siia oma serveri aadress (soovitatavalt privaatvõrgus,
-# nt Tailscale/WireGuard – vt docs/SEADISTAMINE.md).
+# Avalik baas-URL, mille kaudu server iseendale viitab.
+# NB: Androidi rakendus EI loe seda väärtust – telefonis sisestab
+# kasutaja serveri aadressi ise rakenduse seadistusekraanil
+# (vt docs/ANDROID.md). Siia pane oma serveri aadress, kui mõni
+# serveripoolne funktsioon vajab absoluutset URL-i.
 AVALIK_URL = env("MAYA_PUBLIC_URL", f"http://127.0.0.1:{PORT}")
 
 # =====================================================================

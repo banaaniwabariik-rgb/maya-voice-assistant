@@ -40,6 +40,18 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Serveri seadistamise ekraan. Avaneb esimesel käivitusel, kui
+            backendi aadress puudub, ja hiljem rakenduse seadetest.
+            exported="false": väline rakendus seda käivitada ei saa.
+        -->
+        <activity
+            android:name=".ServerSetupActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
         <activity
             android:name=".IncomingCallActivity"
             android:launchMode="singleInstance"

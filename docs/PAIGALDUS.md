@@ -1,5 +1,13 @@
 # Paigaldus nullist
 
+> **MAYA ei ole teenus, millega liituda.** GitHubis on ainult
+> lähtekood ja Androidi APK. **Ükski MAYA server ei jookse GitHubis
+> ega kellegi teise arvutis** – sina paigaldad backendi ise, oma
+> Gemini API võtmega, ja Androidi rakendus ühendub SINU serveriga.
+>
+> Järjekord on alati: **1)** backend tööle → **2)** APK telefoni →
+> **3)** oma serveri aadress rakenduses → **4)** esimene konto.
+
 ## 1. Eeldused
 
 | | Miinimum | Märkus |
@@ -31,6 +39,20 @@ Ava `.env` ja täida vähemalt:
 GEMINI_API_KEY=sinu_voti_siia
 MAYA_USER_NAME=SinuNimi
 ```
+
+#### Oma Gemini API võtme hankimine
+
+1. Ava [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+   ja logi oma Google'i kontoga sisse.
+2. **„Create API key"** → vali või loo Google Cloudi projekt.
+3. Kopeeri võti ja kleebi see `.env` faili ritta `GEMINI_API_KEY=`.
+4. **Live API on tasuline** – arveldus peab projektis sisse lülitatud
+   olema. Hinnad ja kvoodid: [GEMINI_LIVE.md](GEMINI_LIVE.md).
+
+**Võti jääb ainult serverisse.** Androidi rakendus ei näe seda kunagi:
+telefon räägib ainult sinu backendiga ja backend räägib Google'iga.
+`.env` on `.gitignore`-is, nii et võti ei satu versioonihaldusesse.
+Iga MAYA paigaldaja kasutab oma võtit ja maksab oma kasutuse eest.
 
 Kontrolli, et seadistus loeti:
 
@@ -97,17 +119,78 @@ võtit ei andnud. Hääl töötab sellest hoolimata.
 
 ## 3. Androidi rakendus
 
-Vt **[ANDROID.md](ANDROID.md)**.
+Täielik juhend: **[ANDROID.md](ANDROID.md)**.
 
-Lühidalt:
+### 3.1. Kust APK saada
+
+Kaks võimalust – mõlemad annavad **sama** rakenduse:
+
+| | |
+|---|---|
+| **Valmis APK** | hoidla **Releases** leht → `maya-universal.apk`. Kontrolli SHA256 summat, mis on väljalaske juures kirjas. |
+| **Ise ehitatud** | `cd android && ./gradlew assembleDebug` → `android/app/build/outputs/apk/debug/app-debug.apk` |
+
+APK on **universaalne**: selles ei ole ühtegi serveriaadressi ega
+võtit, seega töötab see iga MAYA paigaldusega.
+
+### 3.2. Paigaldus telefoni
 
 ```bash
-# 1. Pane serveri aadress faili android/gradle.properties:
-#    mayaBaseUrl=http://<serveri-ip>:8000
-cd android
-./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+# Telefonis: Seaded → Teave → vajuta 7× „Järgu number"
+#            → Arendaja valikud → USB silumine SISSE
+adb install -r maya-universal.apk
 ```
+
+Ilma arvutita: kopeeri APK telefoni, ava failihalduris ja luba
+„Paigalda tundmatutest allikatest".
+
+`-r` hoiab olemasolevad andmed alles. Kui tuleb
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`, siis
+`adb uninstall com.maya.live` (see kustutab ainult telefoni andmed –
+konto ja mälu on serveris).
+
+### 3.3. Serveri aadress rakenduses
+
+Esimesel käivitusel näitab MAYA **serveri seadistuse ekraani**. Sisesta
+oma backendi aadress, näiteks:
+
+```
+http://192.168.1.50:8000         (sama WiFi – pane siia OMA IP)
+http://100.64.0.5:8000           (Tailscale/WireGuard – OMA IP)
+https://maya.example.com         (oma domeen pöördproksi taga)
+```
+
+Serveri IP leiad käsuga `./kaivita.sh --ip`. Vajuta **„Testi
+ühendust"** – ekraan ütleb otse, kas server vastas ja kas tegemist on
+MAYA backendiga. Alles siis **„Salvesta ja jätka"**.
+
+Aadressi saab hiljem muuta: seaded → **„Minu MAYA server"**.
+
+> **Tulemüür:** backend peab kuulama kohtvõrgu liidesel, mitte ainult
+> `localhost`-il. `./kaivita.sh` teeb seda ise (`MAYA_HOST=0.0.0.0`).
+> macOS küsib esimesel käivitusel tulemüüri luba – vasta „Luba".
+> Kiire kontroll: ava telefoni brauseris
+> `http://<serveri-ip>:8000/api/auth/status`.
+
+### 3.4. Esimene konto telefonis
+
+Pärast serveri salvestamist tuleb sisselogimisekraan. Vajuta **„Loo
+uus konto"** – esimene konto selles paigalduses saab admin-õigused.
+Parool peab olema vähemalt 10 märki.
+
+### 3.5. Load ja akusäästu erand
+
+| Mida | Milleks | Kohustuslik? |
+|---|---|---|
+| Mikrofon | häälvestlus | jah |
+| Kaamera | Maya näeb kaamerapilti | ainult kaamera jaoks |
+| Teated | sissetulev kõne | jah, kui tahad, et Maya helistaks |
+| Galerii/meedia | pildi näitamine | ei |
+| **Akusääst: „Piiranguteta"** | **Maya saab ise helistada ka siis, kui ekraan on kustunud** | **jah, kõnefunktsiooni jaoks** |
+
+`Seaded → Rakendused → MAYA → Aku → Piiranguteta`. Xiaomi, Huawei,
+OnePlus ja Samsung vajavad ka „Autostart" ja „Lukusta rakendus"
+sätteid – vt [ANDROID.md](ANDROID.md).
 
 ## 4. Teenusena käivitamine (valikuline, Linux)
 
@@ -141,11 +224,15 @@ journalctl -u maya.service -f
 - [ ] `python3 server/config.py` näitab `GEMINI_API_KEY : seatud`
 - [ ] `python3 server/init_db.py --check` ütleb `OLEMAS`
 - [ ] `http://127.0.0.1:8000/docs` avaneb
-- [ ] Androidi rakendus avaneb ja ühendub
-- [ ] Häälkõne töötab (vt [GEMINI_LIVE.md](GEMINI_LIVE.md), kui ei)
+- [ ] telefoni brauseris avaneb `http://<serveri-ip>:8000/api/auth/status`
+- [ ] APK paigaldatud ja seadistusekraan tuli ette
+- [ ] „Testi ühendust" ütleb „MAYA server vastas"
 - [ ] Esimene konto loodud ja `/api/auth/me` vastab
 - [ ] Androidi rakenduses sisselogimine õnnestub
+- [ ] Häälkõne töötab (vt [GEMINI_LIVE.md](GEMINI_LIVE.md), kui ei)
+- [ ] Akusäästu erand antud (kõnefunktsiooni jaoks)
 - [ ] Testid: `for f in tests/tests_*.py; do python3 "$f"; done`
+- [ ] Androidi testid: `cd android && ./gradlew testDebugUnitTest`
 
 ## 6. Kui midagi ei tööta
 
@@ -154,7 +241,8 @@ journalctl -u maya.service -f
 | `ModuleNotFoundError` | `pip install -r server/requirements.txt` jäi tegemata või vale venv |
 | `RuntimeError: Form data requires "python-multipart"` | sama, `python-multipart` on nüüd nõuete sees |
 | `GEMINI_API_KEY on seadistamata` | `.env` puudub või on vales kaustas — vt `python3 server/config.py` |
-| Android ei ühendu | vale `mayaBaseUrl`; telefon ja server peavad olema samas võrgus |
+| Android ei ühendu | vale serveri aadress rakenduses (seaded → „Minu MAYA server"); telefon ja server peavad olema samas võrgus või sama VPN-is |
+| Seadistusekraan: „Ühendust ei saadud" | server ei jookse, tulemüür blokeerib, või `MAYA_HOST=127.0.0.1` (kuulab ainult iseennast) |
 | Hääl ei tule | vt [GEMINI_LIVE.md](GEMINI_LIVE.md) — kõige sagedam on kvoot või vale mudel |
 | `401 Autentimine nurjus` | token puudub või aegunud – logi uuesti sisse |
 | WebSocket sulgub kohe (kood 1008) | token ei jõudnud kaasa; kontrolli, et rakendus on sisse logitud |

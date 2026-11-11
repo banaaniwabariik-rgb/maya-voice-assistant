@@ -3,6 +3,26 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// =====================================================================
+// MAYA BACKENDI AADRESS — APK-s EI OLE ÜHTEGI AADRESSI
+// =====================================================================
+// Avalik ehitus on TÜHJA vaikeväärtusega: kasutaja sisestab oma serveri
+// aadressi esimesel käivitusel (ServerSetupActivity) ja see salvestub
+// telefoni SharedPreferences'isse. `MAYA_DEFAULT_BASE_URL` on AINULT
+// arendaja mugavus – väärtus eeltäidab seadistusvälja, ei ühenda ise.
+//
+//   avalik ehitus (kohustuslik):    ./gradlew assembleDebug
+//   arendaja eeltäide (valikuline): ./gradlew assembleDebug \
+//                                     -PmayaDefaultBaseUrl=<oma-server>
+//   (emulaatori erijuht on kirjas docs/ANDROID.md-s)
+//
+// ÄRA pane siia ega gradle.properties-i püsivat aadressi, kui ehitad
+// APK-d avalikuks levitamiseks.
+def mayaDefaultBaseUrl = (project.findProperty('mayaDefaultBaseUrl') ?: '').toString().trim()
+if (mayaDefaultBaseUrl.contains('"') || mayaDefaultBaseUrl.contains('\\')) {
+    throw new GradleException("mayaDefaultBaseUrl sisaldab lubamatuid märke")
+}
+
 android {
     namespace 'com.maya.live'
     compileSdk 34
@@ -23,17 +43,13 @@ android {
         debug {
             manifestPlaceholders = [appLabel: "Maya Live"]
             buildConfigField "boolean", "ENABLE_WATCHER", "true"
-            // MAYA BACKENDI AADRESS. Loetakse gradle.properties-ist
-            // (mayaBaseUrl) või -PmayaBaseUrl=... käsurealt.
-            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+            buildConfigField "String", "MAYA_DEFAULT_BASE_URL", "\"${mayaDefaultBaseUrl}\""
         }
         release {
             minifyEnabled false
             manifestPlaceholders = [appLabel: "Maya Live"]
             buildConfigField "boolean", "ENABLE_WATCHER", "true"
-            // MAYA BACKENDI AADRESS. Loetakse gradle.properties-ist
-            // (mayaBaseUrl) või -PmayaBaseUrl=... käsurealt.
-            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+            buildConfigField "String", "MAYA_DEFAULT_BASE_URL", "\"${mayaDefaultBaseUrl}\""
         }
         // KATSEVERSIOON: paigaldub PÄRIS äpi KÕRVALE eraldi rakendusena
         // (applicationId com.maya.live.lab). Nii saab uut kujundust proovida,
@@ -48,7 +64,7 @@ android {
             versionNameSuffix "-lab"
             manifestPlaceholders = [appLabel: "Maya LAB"]
             buildConfigField "boolean", "ENABLE_WATCHER", "false"
-            buildConfigField "String", "MAYA_BASE_URL", "\"${project.findProperty('mayaBaseUrl') ?: 'http://10.0.2.2:8000'}\""
+            buildConfigField "String", "MAYA_DEFAULT_BASE_URL", "\"${mayaDefaultBaseUrl}\""
             matchingFallbacks = ["debug"]
         }
     }
@@ -67,4 +83,9 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.10.0'
+
+    // ServerConfig puhta loogika testid (./gradlew testDebugUnitTest).
+    // JUnit jääb AINULT testide klassiteele – APK-sse ta ei satu.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20231013'
 }

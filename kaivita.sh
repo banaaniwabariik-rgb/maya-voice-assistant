@@ -5,7 +5,7 @@
 # Käivitab backendi nii, et telefonid samas WiFis saavad ühenduda.
 #
 #   ./kaivita.sh              # käivita
-#   ./kaivita.sh --ip         # näita ainult aadressi, mida APK-sse panna
+#   ./kaivita.sh --ip         # näita ainult aadressi, mille telefoni sisestada
 #   ./kaivita.sh --kontroll   # kontrolli eeldusi ja välju
 #
 # SEE SKRIPT EI SISALDA ÜHTEGI VÕTIT. Võtmed loetakse .env failist,
@@ -134,9 +134,12 @@ fi
 # --- Käivita ---------------------------------------------------------
 echo
 echo "====================================================="
-echo " APK AADRESS (pane see gradle.properties-i või -P lipuga):"
-[ -n "$IP" ] && echo "   mayaBaseUrl=http://$IP:${MAYA_PORT:-8000}"
-[ -n "$TS" ] && echo "   mayaBaseUrl=http://$TS:${MAYA_PORT:-8000}   (Tailscale, töötab ka väljaspool WiFit)"
+echo " SERVERI AADRESS — sisesta see MAYA rakenduses telefonis"
+echo " (esimesel käivitusel tuleb seadistusekraan ise ette;"
+echo "  hiljem: seaded → „Minu MAYA server\" → MUUDA)"
+echo
+[ -n "$IP" ] && echo "   http://$IP:${MAYA_PORT:-8000}"
+[ -n "$TS" ] && echo "   http://$TS:${MAYA_PORT:-8000}   (Tailscale, töötab ka väljaspool WiFit)"
 echo "====================================================="
 echo
 roheline "Käivitan serveri (Ctrl+C lõpetab)…"

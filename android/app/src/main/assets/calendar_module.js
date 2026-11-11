@@ -1,15 +1,18 @@
 (function() {
     'use strict';
 
-    // Aadress tuleb Androidi kihist (gradle.properties -> mayaBaseUrl).
-// Varuvariant on emulaatori "arvuti ise".
+    // Aadress tuleb kasutaja seadistusest (ServerSetupActivity ->
+    // SharedPreferences -> AndroidBridge.getBaseUrls()).
+    // VAIKEAADRESSI EI OLE: kui server on seadistamata, jääb see tühjaks
+    // ja kalendri päringud ei lähe kuhugi – kasutaja suunatakse
+    // seadistusekraanile (vt index.html).
 const MAYA_BASE_URL = (function () {
     try {
         if (window.MAYA_CFG && window.MAYA_CFG.base) return window.MAYA_CFG.base;
         if (window.AndroidBridge && AndroidBridge.getBaseUrls)
-            return JSON.parse(AndroidBridge.getBaseUrls()).base;
-    } catch (e) { console.warn('MAYA_BASE_URL vaikeväärtus', e); }
-    return 'http://10.0.2.2:8000';
+            return JSON.parse(AndroidBridge.getBaseUrls()).base || '';
+    } catch (e) { console.warn('MAYA: serveri aadressi lugemine nurjus', e); }
+    return '';
 })();
 
     const now = new Date();

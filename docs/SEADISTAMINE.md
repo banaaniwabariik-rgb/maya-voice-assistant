@@ -50,8 +50,11 @@ välja, mis haru on välja lülitatud.
 | `MAYA_PORT` | `8000` | |
 | `MAYA_PUBLIC_URL` | `http://127.0.0.1:<port>` | ainult dokumentatsiooni ja logi jaoks |
 
-Androidi pool loeb oma aadressi **mitte siit**, vaid failist
-`android/gradle.properties` → `mayaBaseUrl`.
+Androidi pool **ei loe oma aadressi siit ega üldse serverist**.
+Kasutaja sisestab serveri aadressi telefonis rakenduse
+seadistusekraanil ja see salvestub telefoni
+(`SharedPreferences "maya_server" / "base_url"`). Vt
+[ANDROID.md](ANDROID.md).
 
 ### Kasutaja
 
@@ -87,9 +90,9 @@ kata (pealtkuulamine).
 Tailscale, WireGuard või ZeroTier. Server ja telefon on samas
 privaatvõrgus, avalikust internetist pääsu ei ole.
 
-```
-mayaBaseUrl=http://100.x.y.z:8000
-```
+Androidi rakenduses pane serveri aadressiks oma privaatvõrgu
+aadress, näiteks `http://100.64.0.5:8000` (seaded → „Minu MAYA
+server"). Privaatvõrgu IP ei muutu ka siis, kui kodu-WiFi vahetub.
 
 ### 2. Pöördproksi HTTPS-i ja autentimisega
 

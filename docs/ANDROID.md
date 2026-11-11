@@ -6,31 +6,67 @@
 - Android SDK (API 34) — Android Studio või `cmdline-tools`
 - Päris seade Android 8.0+ (API 26). **Kõnefunktsioon ei tööta emulaatoris.**
 
-## 1. Serveri aadress
+## 1. Serveri aadress — kasutaja sisestab selle rakenduses
 
-Ava `android/gradle.properties` ja pane oma backendi aadress:
+**APK-s ei ole ühtegi serveriaadressi.** Ei vaikeväärtust, ei
+ehitusaegset konstanti. Rakendus küsib aadressi kasutajalt esimesel
+käivitusel ja salvestab selle telefoni.
 
-```properties
-mayaBaseUrl=http://10.0.2.2:8000
+```
+ServerSetupActivity  (esimene käivitus või seaded)
+      │  kasutaja sisestab + „Testi ühendust"
+      ▼
+SharedPreferences  "maya_server" / "base_url"
+      │
+      ├──► ServerConfig.baasUrl()      →  CallWatcherService (SSE)
+      ├──► ServerConfig.wsAadress()    →  ws:// või wss://
+      └──► AndroidBridge.getBaseUrls() →  index.html  MAYA_CFG
+                                          → HTTP API, autentimine, WebSocket
 ```
 
-| Olukord | Väärtus |
+Kogu seadistus on ÜHES kohas (`ServerConfig.kt`), nii et HTTP, SSE ja
+WebSocket ei saa eri serverite peale lahku minna. `https://` annab
+automaatselt `wss://`, `http://` annab `ws://`.
+
+### Mida kasutaja ekraanil sisestab
+
+| Olukord | Näide |
 |---|---|
-| Emulaator, server samas arvutis | `http://10.0.2.2:8000` |
 | Päris telefon, sama WiFi | `http://192.168.1.50:8000` |
-| Privaatvõrk (Tailscale/WireGuard) | `http://100.x.y.z:8000` |
+| Privaatvõrk (Tailscale/WireGuard) | `http://100.64.0.5:8000` |
+| Oma domeen pöördproksi taga | `https://maya.example.com` |
+| Emulaator, server samas arvutis | `http://10.0.2.2:8000` |
 
-Võib anda ka käsurealt: `./gradlew assembleDebug -PmayaBaseUrl=http://...`
+Need on **näited** – igaüks paneb sinna oma serveri aadressi.
+Lühivormid on lubatud: `192.168.1.50` muutub ise
+`http://192.168.1.50:8000`-ks (MAYA vaikeport). Nimega hostile porti
+ei lisata, sest pöördproksi taga on see 443.
 
-Aadress jõuab koodi nii:
+Nupp **„Testi ühendust"** pärib `/api/auth/status` ja ütleb ausalt,
+mis juhtus: kas server vastas, kas tegemist on MAYA backendiga, kas
+kontod on olemas. Kui ühendus ei õnnestu, EI salvestata aadressi
+vaikselt „õnnestunuks" – salvestamiseks tuleb eraldi kinnitada.
 
+Aadressi saab hiljem muuta kahest kohast:
+- rakenduse seadetest → **„Minu MAYA server"** → MUUDA;
+- sisselogimisekraanilt → **„Muuda serveri aadressi"** (kui aadress
+  on vale, ei jää sa sisselogimise taha kinni).
+
+Serveri vahetamisel kustutatakse vana token – token kuulub ühele
+paigaldusele.
+
+### Arendaja eeltäide (valikuline)
+
+Kui ehitad ise ja ei taha aadressi iga paigalduse järel käsitsi
+sisestada, saad seadistusvälja **eeltäita**:
+
+```bash
+./gradlew assembleDebug -PmayaDefaultBaseUrl=http://192.168.1.50:8000
 ```
-gradle.properties  →  BuildConfig.MAYA_BASE_URL  →  CallWatcherService.kt
-                                                 →  AndroidBridge.getBaseUrls()
-                                                 →  index.html  MAYA_CFG
-```
 
-**Ühtegi aadressi ei ole koodis kõvakodeeritud.**
+See ainult täidab välja ette ära – rakendus ei ühenda ise kuhugi ja
+kasutaja peab ikka salvestama. **Avalikuks levitamiseks ehita ILMA
+selle liputa**, muidu läheb sinu aadress APK-sse.
 
 ## 2. Ehitamine ja paigaldamine
 
@@ -43,6 +79,17 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 `-r` hoiab olemasolevad andmed alles.
 
 APK asub: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Kui sa ei taha ise ehitada, võta valmis APK hoidla **Releases**
+lehelt (vt [PAIGALDUS.md](PAIGALDUS.md)). GitHub levitab ainult
+lähtekoodi ja APK-d – **ükski MAYA server GitHubis ei jookse.**
+
+### Testid
+
+```bash
+cd android
+./gradlew testDebugUnitTest      # ServerConfig puhas loogika
+```
 
 ### Allkirjastamine
 
@@ -135,7 +182,11 @@ pilti korrektselt. Kaamera tõstab vastamise latentsust ~0,5 s võrra.
 
 | Sümptom | Põhjus |
 |---|---|
-| „Ei saa serveriga ühendust" | vale `mayaBaseUrl`; kontrolli `adb shell ping <ip>` |
+| Käivitusel tuleb serveri seadistusekraan | nii peabki – aadress on seadistamata |
+| „Ühendust ei saadud" seadistusekraanil | server ei jookse, vale port, või tulemüür blokeerib – vt `./kaivita.sh` |
+| „Server vastas, aga see ei ole MAYA backend" | aadress viitab mõnele teisele teenusele; kontrolli porti |
+| „Serveri nime ei leitud" | kirjaviga hostinimes; proovi IP-aadressiga |
+| „Ei saa serveriga ühendust" hiljem | server kolis või IP muutus – seaded → „Minu MAYA server" |
 | Sisselogimine: „Sisselogimine nurjus" | vale parool, või server ei jookse |
 | Sisselogimisekraan tuleb iga kord | token ei salvestu – kontrolli, et `AndroidBridge` on olemas (ainult APK-s, mitte brauseris) |
 | Kõne ei jõua kohale pärast sisselogimist | vt `adb logcat \| grep CallWatcher` – kui seal on „Token puudub", logi rakenduses uuesti sisse |

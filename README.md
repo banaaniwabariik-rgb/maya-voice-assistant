@@ -13,6 +13,11 @@ Androidi rakendus.
 > assistendina ja on siia üle toodud nii, et kogu isiklik sisu,
 > võtmed, serveriaadressid ja vestlusajalugu on välja jäetud. Sa
 > paigaldad oma eksemplari, oma võtmetega ja oma karakteritega.
+>
+> **MAYA ei ole teenus.** GitHubis on ainult lähtekood ja Androidi
+> APK – ükski MAYA server siin ei jookse. Sina käivitad backendi oma
+> arvutis või serveris, oma Gemini API võtmega, ja telefon ühendub
+> SINU serveriga. Rakendus küsib selle aadressi esimesel käivitusel.
 
 ---
 
@@ -38,6 +43,8 @@ Androidi rakendus.
 
 ## Kiire algus
 
+**1. Backend tööle:**
+
 ```bash
 git clone <sinu-repo-aadress> maya
 cd maya
@@ -52,10 +59,22 @@ cp .env.example .env                 # täida GEMINI_API_KEY
                                      # andmebaasi ja käivitab serveri
 ```
 
-`kaivita.sh` ütleb ka välja aadressi, mille Androidi APK-sse panna.
+`kaivita.sh` ütleb välja aadressi, mille telefonis sisestad.
 Ainult aadressi küsimiseks: `./kaivita.sh --ip`
 
-Seejärel loo esimene konto — **esimene konto saab admin-õigused**:
+**2. Androidi rakendus telefoni** — võta `maya-universal.apk`
+**Releases** lehelt või ehita ise (`cd android && ./gradlew
+assembleDebug`). APK-s **ei ole ühtegi serveriaadressi** ega võtit,
+seega töötab see iga MAYA paigaldusega.
+
+**3. Serveri aadress rakenduses:** esimesel käivitusel tuleb
+seadistusekraan ette. Sisesta oma backendi aadress (nt
+`http://192.168.1.50:8000` – pane sinna OMA IP), vajuta **„Testi
+ühendust"** ja siis **„Salvesta ja jätka"**. Hiljem saab muuta:
+seaded → „Minu MAYA server".
+
+**4. Esimene konto** — **esimene konto saab admin-õigused**. Kõige
+lihtsam on seda teha telefonis („Loo uus konto"). Käsurealt:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/auth/register \
@@ -63,11 +82,8 @@ curl -X POST http://127.0.0.1:8000/api/auth/register \
      -d '{"username":"sinu_nimi","password":"vahemalt_10_margi_pikk_parool"}'
 ```
 
-Või tee seda Androidi rakenduse sisselogimisekraanil („Loo uus konto").
-
-Seejärel ehita Androidi rakendus — vt **[docs/ANDROID.md](docs/ANDROID.md)**.
-
-Täielik juhend: **[docs/PAIGALDUS.md](docs/PAIGALDUS.md)**
+Täielik juhend: **[docs/PAIGALDUS.md](docs/PAIGALDUS.md)** ·
+Androidi detailid: **[docs/ANDROID.md](docs/ANDROID.md)**
 
 ---
 
@@ -79,6 +95,11 @@ Täielik juhend: **[docs/PAIGALDUS.md](docs/PAIGALDUS.md)**
 | **Python 3.11+** | testitud 3.13 ja 3.14 peal |
 | **Androidi telefon** | Android 8.0+ (API 26). Kõnefunktsioon vajab päris seadet |
 | **Server** | võib olla sinu arvuti, koduserver või pilv. Vt turvahoiatust allpool |
+
+**Gemini API võti jääb ainult serverisse.** Androidi rakendus ei näe
+seda kunagi: telefon räägib sinu backendiga, backend räägib
+Google'iga. Iga paigaldaja kasutab oma võtit ja maksab oma kasutuse
+eest.
 
 Valikuline: Groqi võti (tekstivestlus), Tavily (veebiotsing), Gmaili
 rakenduse parool (e-post).
@@ -161,8 +182,9 @@ Aususe huvides — avalik koopia **ei sisalda**:
 - Androidi allkirjastamisvõtmeid;
 - algse projekti Git-ajalugu.
 
-Samuti ei ole kaasas päris seadmes kontrollitud Androidi APK-d — sa
-ehitad selle ise.
+Androidi APK on kaasas (**Releases** leht), aga **seda ei ole päris
+seadmes kontrollitud** – see on ehitatud ja sisu poolest üle
+kontrollitud, mitte telefonis läbi testitud. Soovi korral ehita ise.
 
 ---
 

@@ -47,6 +47,20 @@ if [ -n "$LEITUD" ]; then
 else ok "keelatud faile ei ole"; fi
 echo
 
+# Sama põhjendus kehtib ka SISU-kontrollidele (2–4): kui git faili
+# ignoreerib, siis see repossse ei jõua. Nii saab `valjalase/` kaustas
+# olla omaniku kohalik paigaldusjuhend oma võrgu aadressiga, ilma et
+# avalik kontroll valehäiret annaks. Filter võtab sisendiks
+# `grep -n` väljundi read kujul `./tee:rida:sisu`.
+filtreeri_ignoreeritud() {
+  if [ ! -d .git ]; then cat; return; fi
+  while IFS= read -r rida; do
+    [ -z "$rida" ] && continue
+    tee=${rida%%:*}
+    git check-ignore -q "$tee" 2>/dev/null || echo "$rida"
+  done
+}
+
 # --- 2. API võtmete mustrid ------------------------------------------
 echo "2) API võtmete mustrid"
 # AIza… = Google, gsk_… = Groq, sk-… = OpenAI-stiil, ghp_… = GitHub
@@ -63,15 +77,28 @@ echo
 
 # --- 3. Kõvakodeeritud IP-aadressid ---------------------------------
 echo "3) Kõvakodeeritud IP-aadressid"
-# Lubatud: 0.0.0.0, 127.0.0.1, 10.0.2.2 (emulaator), 192.168.x.y näited
+# LUBATUD AADRESSID JA MIKS:
+#   0.0.0.0 / 127.0.0.1 / 10.0.2.2  – kuulamisaadress, loopback, emulaator
+#   10.x.x.x ja 172.16–31.x.x       – RFC 1918 näited (omaniku võrk ei ole
+#                                     kummaski: LAN on 192.168.x, VPN 100.x)
+#   192.168.x.x                     – RFC 1918 näited
+#   192.0.2.x / 198.51.100.x / 203.0.113.x – RFC 5737 dokumentatsiooni IP-d
+#   100.64.0.5                      – AINUS lubatud 100.x näide. Ülejäänud
+#                                     100.x jääb RANGEKS, sest omaniku
+#                                     Tailscale'i aadress on selles vahemikus.
 PAHAD=$(grep -rInoE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" \
     --exclude-dir=.git --exclude-dir=.venv --exclude-dir=build \
     --exclude="kontrolli_privaatsust.sh" . 2>/dev/null \
   | grep -vE ":(0\.0\.0\.0|127\.0\.0\.1|10\.0\.2\.2|255\.255\.255\.0|1\.2\.3\.4)$" \
+  | grep -vE ":10\.[0-9]+\.[0-9]+\.[0-9]+$" \
+  | grep -vE ":172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+$" \
   | grep -vE "192\.168\.[0-9]+\.[0-9]+$" \
-  | grep -vE "100\.(x|[0-9]+)\.(y|[0-9]+)\.(z|[0-9]+)$" \
+  | grep -vE ":(192\.0\.2|198\.51\.100|203\.0\.113)\.[0-9]+$" \
+  | grep -vE ":100\.64\.0\.5$" \
+  | grep -vE ":100\.x\.y\.z$" \
   | grep -vE "Chrome/|Safari/|AppleWebKit/|User-Agent|Mozilla" \
-  | grep -vE ":[0-9]+\.0\.0\.0$" || true)
+  | grep -vE ":[0-9]+\.0\.0\.0$" \
+  | filtreeri_ignoreeritud || true)
 if [ -n "$PAHAD" ]; then
   echo "$PAHAD" | head -20 | while read -r r; do teata "IP: $r"; done
   VEAD=$((VEAD+1))

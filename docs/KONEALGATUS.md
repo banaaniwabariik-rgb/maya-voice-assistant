@@ -59,13 +59,19 @@ sa vastad ja Maya räägib kohe esimese lausega oma asja.
 kõvakodeeritud ühe konkreetse privaatvõrgu IP peale. Nüüd:
 
 ```
-android/gradle.properties:   mayaBaseUrl=http://10.0.2.2:8000
-          ↓ (buildConfigField)
-BuildConfig.MAYA_BASE_URL
+ServerSetupActivity.kt   kasutaja sisestab oma serveri aadressi
           ↓
-CallWatcherService.kt:  URL("${BuildConfig.MAYA_BASE_URL}/api/call_events")
+SharedPreferences "maya_server" / "base_url"
+          ↓
+ServerConfig.baasUrl()
+          ↓
+CallWatcherService.kt:  URL("${ServerConfig.sseAadress(base)}/api/call_events")
 MainActivity.kt:        AndroidBridge.getBaseUrls()  →  index.html MAYA_CFG
 ```
+
+Aadressi ei ole APK-s ette antud. Kuni kasutaja pole seadistanud, EI
+võta valvur ühendust kuhugi – ta ootab ja logib
+`Serveri aadress puudub – ootan seadistust`.
 
 Mehhanism, SSE-protokoll, kõneekraan ja avasõnumi loogika on
 **muutmata**.
