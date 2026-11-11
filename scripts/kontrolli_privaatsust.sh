@@ -30,6 +30,17 @@ LEITUD=$(find . -type f \( \
     -o -name "memory.json" -o -name "knowledge.json" \
   \) -not -path "./.git/*" -not -path "./.venv/*" \
      -not -path "*/build/*" -not -name ".env.example" 2>/dev/null)
+# TÕELINE KRITEERIUM on "ei tohi REPOSSE jõuda", mitte "ei tohi
+# kettal olla". Kui git ignoreerib faili, siis see kriteerium on
+# täidetud – nii saab `valjalase/` kaustas olla väljalaske APK ja
+# `data/` kaustas kohalik andmebaas, ilma et kontroll valehäiret
+# annaks. Jälgitud failid jäävad endiselt vea alla.
+if [ -n "$LEITUD" ] && [ -d .git ]; then
+  LEITUD=$(echo "$LEITUD" | while read -r f; do
+    [ -z "$f" ] && continue
+    git check-ignore -q "$f" 2>/dev/null || echo "$f"
+  done)
+fi
 if [ -n "$LEITUD" ]; then
   echo "$LEITUD" | while read -r f; do teata "keelatud fail: $f"; done
   VEAD=$((VEAD+1))
