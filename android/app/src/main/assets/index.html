@@ -589,6 +589,65 @@
     </style>
 </head>
 <body>
+<!-- =====================================================================
+     MAYA SISSELOGIMINE
+     =====================================================================
+     Kate näidatakse seni, kuni kehtiv token puudub. Server nõuab
+     autentimist kõigil /api otspunktidel ja WebSocketil, seega ilma
+     sisselogimist ei saa rakendust kasutada.
+     Esimene registreeruja saab selles paigalduses admin-õigused.
+-->
+<div id="mayaLogin" style="
+     position:fixed; inset:0; z-index:99999; display:none;
+     background:#0b0d10; color:#e8eaed; font-family:system-ui,sans-serif;
+     align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:380px;">
+    <h1 style="font-size:28px; margin:0 0 4px; letter-spacing:.5px;">MAYA</h1>
+    <p id="mayaLoginAlt" style="opacity:.65; margin:0 0 22px; font-size:14px;">
+      Logi sisse, et Mayaga rääkida.</p>
+
+    <label style="display:block; font-size:13px; opacity:.75; margin-bottom:4px;">
+      Kasutajanimi</label>
+    <input id="mayaUser" autocomplete="username" autocapitalize="none"
+           style="width:100%; box-sizing:border-box; padding:12px;
+                  margin-bottom:14px; border-radius:10px; border:1px solid #2a2f36;
+                  background:#15181c; color:#e8eaed; font-size:16px;">
+
+    <label style="display:block; font-size:13px; opacity:.75; margin-bottom:4px;">
+      Parool</label>
+    <input id="mayaPass" type="password" autocomplete="current-password"
+           style="width:100%; box-sizing:border-box; padding:12px;
+                  margin-bottom:14px; border-radius:10px; border:1px solid #2a2f36;
+                  background:#15181c; color:#e8eaed; font-size:16px;">
+
+    <div id="mayaInviteWrap" style="display:none;">
+      <label style="display:block; font-size:13px; opacity:.75; margin-bottom:4px;">
+        Kutsekood</label>
+      <input id="mayaInvite"
+             style="width:100%; box-sizing:border-box; padding:12px;
+                    margin-bottom:14px; border-radius:10px; border:1px solid #2a2f36;
+                    background:#15181c; color:#e8eaed; font-size:16px;">
+    </div>
+
+    <button id="mayaLoginBtn" style="
+            width:100%; padding:14px; border:0; border-radius:10px;
+            background:#4f7cff; color:#fff; font-size:16px; font-weight:600;">
+      Logi sisse</button>
+
+    <button id="mayaRegisterBtn" style="
+            width:100%; padding:12px; margin-top:10px; border:1px solid #2a2f36;
+            border-radius:10px; background:transparent; color:#9fb4ff;
+            font-size:15px;">Loo uus konto</button>
+
+    <p id="mayaLoginErr" style="color:#ff7b7b; font-size:14px;
+       min-height:20px; margin:14px 0 0;"></p>
+    <p style="opacity:.45; font-size:12px; margin-top:18px; line-height:1.5;">
+      Server: <span id="mayaServerAddr"></span><br>
+      Parool peab olema vähemalt 10 märki.
+    </p>
+  </div>
+</div>
+
     <div class="top-header">
         <div class="title">MAYA LIVE</div>
         <!-- Peamine ONLINE / OFFLINE toitenupp -->
@@ -808,6 +867,132 @@
         })();
         window.MAYA_CFG = MAYA_CFG;   // calendar_module.js loeb siit
         const SERVER_URL = MAYA_CFG.base;
+
+        // =============================================================
+        // MAYA AUTENTIMINE
+        // =============================================================
+        // Server nõuab kõigil /api otspunktidel ja WebSocketil
+        // kehtivat tokenit. Token elab Androidi SharedPreferences'is
+        // (AndroidBridge), et ka taustateenus CallWatcherService saaks
+        // selle kätte. Brauseris testimisel kasutame sessionStorage'i.
+        const MayaAuth = (function () {
+            function get() {
+                try {
+                    if (window.AndroidBridge && AndroidBridge.getAuthToken)
+                        return AndroidBridge.getAuthToken() || "";
+                } catch (e) { /* vaikne */ }
+                try { return sessionStorage.getItem("maya_token") || ""; }
+                catch (e) { return ""; }
+            }
+            function set(t) {
+                try {
+                    if (window.AndroidBridge && AndroidBridge.setAuthToken) {
+                        AndroidBridge.setAuthToken(t || "");
+                        return;
+                    }
+                } catch (e) { /* vaikne */ }
+                try { sessionStorage.setItem("maya_token", t || ""); }
+                catch (e) { /* vaikne */ }
+            }
+            function clear() {
+                try {
+                    if (window.AndroidBridge && AndroidBridge.clearAuthToken)
+                        AndroidBridge.clearAuthToken();
+                } catch (e) { /* vaikne */ }
+                try { sessionStorage.removeItem("maya_token"); }
+                catch (e) { /* vaikne */ }
+            }
+            // Päised iga /api päringu jaoks.
+            function headers(extra) {
+                var h = Object.assign({}, extra || {});
+                var t = get();
+                if (t) h["Authorization"] = "Bearer " + t;
+                return h;
+            }
+            // WebSocketi ja SSE jaoks: token peab minema URL-i, sest
+            // WebSocketi käepigistusele ei saa päist lisada.
+            function withToken(url) {
+                var t = get();
+                if (!t) return url;
+                return url + (url.indexOf("?") >= 0 ? "&" : "?") +
+                       "token=" + encodeURIComponent(t);
+            }
+            async function login(username, password) {
+                var r = await fetch(SERVER_URL + "/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: username, password: password,
+                        device: "android"
+                    })
+                });
+                var d = await r.json().catch(function () { return {}; });
+                if (!r.ok) throw new Error(d.detail || "Sisselogimine nurjus");
+                set(d.token);
+                return d.user;
+            }
+            async function register(username, password, inviteCode) {
+                var r = await fetch(SERVER_URL + "/api/auth/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: username, password: password,
+                        invite_code: inviteCode || "", device: "android"
+                    })
+                });
+                var d = await r.json().catch(function () { return {}; });
+                if (!r.ok) throw new Error(d.detail || "Konto loomine nurjus");
+                set(d.token);
+                return d.user;
+            }
+            async function logout() {
+                try {
+                    await fetch(SERVER_URL + "/api/auth/logout",
+                                { method: "POST", headers: headers() });
+                } catch (e) { /* vaikne */ }
+                clear();
+            }
+            async function me() {
+                var r = await fetch(SERVER_URL + "/api/auth/me",
+                                    { headers: headers() });
+                if (!r.ok) return null;
+                var d = await r.json().catch(function () { return null; });
+                return d && d.user ? d.user : null;
+            }
+            async function status() {
+                var r = await fetch(SERVER_URL + "/api/auth/status");
+                return r.ok ? r.json() : { seadistatud: false };
+            }
+            return { get: get, set: set, clear: clear, headers: headers,
+                     withToken: withToken, login: login,
+                     register: register, logout: logout, me: me,
+                     status: status };
+        })();
+        window.MayaAuth = MayaAuth;
+
+        // --- fetch'i ümbris: lisa token KÕIGILE MAYA päringutele -----
+        // MIKS ÜMBRIS JA MITTE IGA KUTSE ERALDI: `index.html`-is on
+        // kümneid fetch-kutseid. Ümbris tagab, et ükski neist ei jää
+        // tokenita, ka tulevased. Väliseid aadresse (Google jne) see
+        // ei puuduta – token läheb AINULT meie enda serverile.
+        (function () {
+            var algne = window.fetch.bind(window);
+            window.fetch = function (sisend, valikud) {
+                try {
+                    var url = (typeof sisend === "string")
+                        ? sisend : (sisend && sisend.url) || "";
+                    var meie = url.indexOf(MAYA_CFG.base) === 0 ||
+                               url.indexOf(MAYA_CFG.alt) === 0 ||
+                               url.indexOf(MAYA_CFG.vision) === 0 ||
+                               url.indexOf("/api/") === 0;
+                    if (meie && url.indexOf("/api/auth/") < 0) {
+                        valikud = valikud || {};
+                        valikud.headers = MayaAuth.headers(valikud.headers);
+                    }
+                } catch (e) { /* vaikne */ }
+                return algne(sisend, valikud);
+            };
+        })();
                 const WATCHER_URL = MAYA_CFG.alt;
         
         
@@ -1557,7 +1742,11 @@
                 const customParam = (selectedPersona === "custom")
                     ? encodeURIComponent(customPromptVal || "")
                     : "";
-                liveWs = new WebSocket(`${wsProto}//${wsHost}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`);
+                // AUTENTIMINE: token läheb URL-i, sest WebSocketi käepigistus
+                // ei luba kohandatud päist. Ilma tokenita sulgeb server
+                // ühenduse koodiga 1008.
+                liveWs = new WebSocket(MayaAuth.withToken(
+                    `${wsProto}//${wsHost}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`));
                 liveWs.binaryType = "arraybuffer";
 
                 let liveVisionTimer = null;
@@ -3190,5 +3379,89 @@ async function loopAutonomousVision() {
 setTimeout(() => { requestAnimationFrame(loopAutonomousVision); }, 2500);
 </script>
 
+
+<script>
+// =====================================================================
+// MAYA SISSELOGIMISE LOOGIKA
+// =====================================================================
+(function () {
+    const kate = () => document.getElementById("mayaLogin");
+    const viga = (t) => {
+        const e = document.getElementById("mayaLoginErr");
+        if (e) e.textContent = t || "";
+    };
+
+    function naita(naidata) {
+        const k = kate();
+        if (!k) return;
+        k.style.display = naidata ? "flex" : "none";
+    }
+
+    async function kontrolliSisselogimist() {
+        const a = document.getElementById("mayaServerAddr");
+        if (a) a.textContent = (window.MAYA_CFG && MAYA_CFG.base) || "?";
+        let st = { seadistatud: true, kutsekood_noutud: false };
+        try { st = await MayaAuth.status(); } catch (e) { /* server maas */ }
+        const alt = document.getElementById("mayaLoginAlt");
+        if (!st.seadistatud && alt) {
+            alt.textContent = "Esimene konto saab selles paigalduses " +
+                              "administraatori õigused.";
+        }
+        const inv = document.getElementById("mayaInviteWrap");
+        if (inv) inv.style.display = st.kutsekood_noutud ? "block" : "none";
+
+        if (MayaAuth.get()) {
+            const u = await MayaAuth.me();
+            if (u) {
+                naita(false);
+                document.dispatchEvent(new CustomEvent("maya-auth-ok",
+                                                      { detail: u }));
+                return true;
+            }
+            MayaAuth.clear();
+        }
+        naita(true);
+        return false;
+    }
+
+    async function teeLogin(regime) {
+        const u = (document.getElementById("mayaUser") || {}).value || "";
+        const p = (document.getElementById("mayaPass") || {}).value || "";
+        const inv = (document.getElementById("mayaInvite") || {}).value || "";
+        viga("");
+        if (!u || !p) { viga("Täida kasutajanimi ja parool."); return; }
+        try {
+            const kasutaja = regime === "register"
+                ? await MayaAuth.register(u, p, inv)
+                : await MayaAuth.login(u, p);
+            naita(false);
+            document.dispatchEvent(new CustomEvent("maya-auth-ok",
+                                                   { detail: kasutaja }));
+        } catch (e) {
+            viga(e && e.message ? e.message : "Sisselogimine nurjus.");
+        }
+    }
+
+    window.mayaLogiVälja = async function () {
+        await MayaAuth.logout();
+        naita(true);
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const lb = document.getElementById("mayaLoginBtn");
+        const rb = document.getElementById("mayaRegisterBtn");
+        if (lb) lb.addEventListener("click", () => teeLogin("login"));
+        if (rb) rb.addEventListener("click", () => teeLogin("register"));
+        const pass = document.getElementById("mayaPass");
+        if (pass) pass.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") teeLogin("login");
+        });
+        kontrolliSisselogimist();
+    });
+
+    // Kui server vastab 401, näita kate uuesti.
+    window.mayaKontrolliAutentimist = kontrolliSisselogimist;
+})();
+</script>
 </body>
 </html>

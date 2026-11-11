@@ -70,11 +70,34 @@ class CallWatcherService : Service() {
             while (isRunning) {
                 var conn: HttpURLConnection? = null
                 try {
+                    // AUTENTIMINE: ilma tokenita vastab server 401 ja
+                    // me ei ürita uuesti enne, kui kasutaja on
+                    // rakenduses sisse loginud.
+                    val token = getSharedPreferences(
+                        MainActivity.MAYA_PREFS, Context.MODE_PRIVATE)
+                        .getString(MainActivity.MAYA_TOKEN_KEY, "") ?: ""
+                    if (token.isEmpty()) {
+                        Log.d(TAG, "Token puudub – ootan sisselogimist")
+                        Thread.sleep(10000)
+                        continue
+                    }
                     val url = URL("${BuildConfig.MAYA_BASE_URL}/api/call_events")
                     conn = (url.openConnection() as HttpURLConnection).apply {
                         requestMethod = "GET"
                         readTimeout = 0
                         connectTimeout = 15000
+                        // Päis on eelistatud; token ei jõua nii
+                        // serveri juurdepääsulogidesse.
+                        setRequestProperty("Authorization", "Bearer $token")
+                    }
+                    if (conn.responseCode == 401 || conn.responseCode == 403) {
+                        Log.w(TAG, "Server keeldus (${conn.responseCode}) " +
+                                "– token aegunud, ootan uut sisselogimist")
+                        getSharedPreferences(MainActivity.MAYA_PREFS,
+                                Context.MODE_PRIVATE).edit()
+                            .remove(MainActivity.MAYA_TOKEN_KEY).apply()
+                        Thread.sleep(15000)
+                        continue
                     }
 
                     Log.d(TAG, "Ühendus serveriga elus!")

@@ -20,6 +20,9 @@ from zoneinfo import ZoneInfo
 from google import genai
 from google.genai import types
 
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 
 DB_TIMEOUT = 10          # sekundit: ootame luku vabanemist, mitte ei kuku kohe
@@ -33,7 +36,7 @@ def db_connect(path=None, timeout=DB_TIMEOUT):
     konsolideerimine, /api/reminders CRUD, meeldetuletuste valvur iga 5 s,
     Telegrami haru), seega anname lukule rohkem aega.
     """
-    return sqlite3.connect(path or DB_PATH, timeout=timeout)
+    return config.connect(timeout=timeout, tee=path)
 
 
 def init_memory_db():
@@ -341,7 +344,7 @@ def recall_relevant_memories(query: str, limit: int = 6, persona: str = "") -> s
     """
     results = []
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         
         # 1. Pikaajalised faktid – FTS5, ainult AKTIIVSED (FAAS D).
@@ -461,7 +464,7 @@ def save_facts_direct(facts_list: list, source: str = "kone", persona: str = "")
         return
     try:
         now_str = datetime.now(ZoneInfo("Europe/Tallinn")).strftime("%Y-%m-%d %H:%M:%S")
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         memory_fts.ensure_schema(conn)
 
         tally = {}
@@ -644,7 +647,7 @@ async def consolidate_session_to_memory(working_mem: SessionWorkingMemory,
     pairs = working_mem.get_dialogue_pairs()
     if pairs:
         try:
-            conn = sqlite3.connect(DB_PATH, timeout=10)
+            conn = config.connect(timeout=10)
             c = conn.cursor()
             # Karakteri veerg võib vanas baasis puududa – ära kuku kokku.
             has_persona = "persona" in {
@@ -710,7 +713,7 @@ async def consolidate_session_to_memory(working_mem: SessionWorkingMemory,
                     print(f"--> [MÄLUMOOTOR]: nimi kõne lõpus parandatud "
                           f"(varutee): {r['teade']}", flush=True)
                     try:
-                        conn2 = sqlite3.connect(DB_PATH, timeout=10)
+                        conn2 = config.connect(timeout=10)
                         try:
                             memory_fts.ensure_schema(conn2)
                             k = memory_fts.retire_name_facts(

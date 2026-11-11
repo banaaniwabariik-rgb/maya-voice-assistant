@@ -1,0 +1,59 @@
+name: 💡 Funktsiooni soov
+description: Ettepanek, mida MAYA võiks veel teha
+labels: ["soov"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Enne kirjutamist vaata [CONTRIBUTING.md](../CONTRIBUTING.md)
+        jaotist „Mida me tõenäoliselt tagasi lükkame".
+
+  - type: textarea
+    id: probleem
+    attributes:
+      label: Millist probleemi see lahendab?
+      description: Kirjelda olukorda, mitte lahendust.
+    validations:
+      required: true
+
+  - type: textarea
+    id: lahendus
+    attributes:
+      label: Milline lahendus sulle sobiks?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ulatus
+    attributes:
+      label: Mida see puudutab?
+      multiple: true
+      options:
+        - Backend
+        - Androidi rakendus
+        - Uus platvorm (iOS jms)
+        - Karakterid
+        - Mälu
+        - Autentimine / turvalisus
+        - Dokumentatsioon
+        - CI / arendusvoog
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: piirid
+    attributes:
+      label: Kinnitan, et ettepanek EI
+      options:
+        - label: asenda Gemini Live't teise mudeli või kõnesünteesiga
+          required: true
+        - label: eemalda karakteri algatatud kõnet ega taanda seda tavateateks
+          required: true
+        - label: nõrgenda kasutaja prioriteeti (kasutaja kõne peab alati võitma)
+          required: true
+
+  - type: textarea
+    id: muu
+    attributes:
+      label: Muu
+      description: Kas oled nõus seda ise tegema? Kas on näiteid teistest projektidest?

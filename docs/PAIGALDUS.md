@@ -61,6 +61,31 @@ cd server && python3 web_maya.py
 
 Server kuulab pordil 8000. Kontroll: ava `http://127.0.0.1:8000/docs`.
 
+### Esimene konto
+
+Kõik `/api` otspunktid nõuavad autentimist. **Esimene konto saab
+admin-õigused.**
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/register \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"sinu_nimi","password":"vahemalt_10_margi_pikk_parool"}'
+```
+
+Vastuses on `token`. Kontrolli, et see töötab:
+
+```bash
+TOKEN=<kleebi token siia>
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/auth/me
+```
+
+Androidi rakenduses saab konto luua ka sisselogimisekraanil
+(„Loo uus konto") – siis salvestab rakendus tokeni ise.
+
+Registreerimise sulgemiseks pane `.env`-i `MAYA_ALLOW_REGISTRATION=0`
+või nõua kutsekoodi `MAYA_INVITE_CODE=...` – vt
+[TURVALISUS.md](TURVALISUS.md).
+
 Logis peaks olema:
 ```
 --> [MÄLUMOOTOR]: SQLite journal_mode=wal
@@ -118,6 +143,8 @@ journalctl -u maya.service -f
 - [ ] `http://127.0.0.1:8000/docs` avaneb
 - [ ] Androidi rakendus avaneb ja ühendub
 - [ ] Häälkõne töötab (vt [GEMINI_LIVE.md](GEMINI_LIVE.md), kui ei)
+- [ ] Esimene konto loodud ja `/api/auth/me` vastab
+- [ ] Androidi rakenduses sisselogimine õnnestub
 - [ ] Testid: `for f in tests/tests_*.py; do python3 "$f"; done`
 
 ## 6. Kui midagi ei tööta
@@ -129,3 +156,6 @@ journalctl -u maya.service -f
 | `GEMINI_API_KEY on seadistamata` | `.env` puudub või on vales kaustas — vt `python3 server/config.py` |
 | Android ei ühendu | vale `mayaBaseUrl`; telefon ja server peavad olema samas võrgus |
 | Hääl ei tule | vt [GEMINI_LIVE.md](GEMINI_LIVE.md) — kõige sagedam on kvoot või vale mudel |
+| `401 Autentimine nurjus` | token puudub või aegunud – logi uuesti sisse |
+| WebSocket sulgub kohe (kood 1008) | token ei jõudnud kaasa; kontrolli, et rakendus on sisse logitud |
+| `429 Liiga palju päringuid` | kiiruspiirang; oota minut või tõsta `MAYA_RATE_LIMIT` |

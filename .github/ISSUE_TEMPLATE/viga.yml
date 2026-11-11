@@ -1,0 +1,85 @@
+name: 🐞 Veateade
+description: Midagi ei tööta nii, nagu peaks
+labels: ["viga"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **ÄRA LISA SIIA:** API võtmeid, paroole, tokeneid ega vestluste
+        sisu. Asenda need kohahoidjatega (`<token>`, `<minu-server>`).
+
+  - type: textarea
+    id: mis-juhtus
+    attributes:
+      label: Mis juhtus?
+      description: Mida sa tegid ja mis tulemus oli.
+      placeholder: |
+        1. Käivitasin kõne karakteriga "sober"
+        2. Ütlesin "tere"
+        3. Maya jäi keset lauset vait ja ei jätkanud
+    validations:
+      required: true
+
+  - type: textarea
+    id: oodatud
+    attributes:
+      label: Mida sa ootasid?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logi
+    attributes:
+      label: Serveri logi
+      description: |
+        Kasulikud read on `[VOOG]`, `[AJAJOON]`, `[GEMINI META]`,
+        `[LIVE WS ...]`. **Eemalda vestluse sisu.**
+      render: text
+
+  - type: input
+    id: versioon
+    attributes:
+      label: MAYA versioon või commit
+      placeholder: "nt main @ a1b2c3d"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kus
+    attributes:
+      label: Kus viga esineb?
+      multiple: true
+      options:
+        - Backend (server)
+        - Androidi rakendus
+        - Gemini Live hääl
+        - Mälu
+        - Meeldetuletused / kalender
+        - Karakteri algatatud kõne
+        - Kaamera
+        - Autentimine
+        - Dokumentatsioon
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python ja OS
+      placeholder: "Python 3.13, Debian 12"
+
+  - type: input
+    id: seade
+    attributes:
+      label: Androidi seade ja versioon
+      placeholder: "OnePlus 6, Android 11"
+
+  - type: checkboxes
+    id: kontroll
+    attributes:
+      label: Enne teatamist
+      options:
+        - label: Jooksutasin `for f in tests/tests_*.py; do python3 "$f"; done`
+        - label: Kontrollisin, et `.env`-is on `GEMINI_API_KEY`
+        - label: Logis ei ole minu isiklikku vestlust ega võtmeid
+          required: true

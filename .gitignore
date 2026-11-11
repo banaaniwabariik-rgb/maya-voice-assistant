@@ -63,8 +63,12 @@ venv/
 env/
 
 # Android
+# APK-d ei kuulu versioonihaldusesse – need ehitatakse.
+# ERAND: valjalase/ kaust on väljalaskekandidaadi jaoks, aga ka
+# seda ei commit'ita (3 MB binaar). Hoia see lokaalselt.
 *.apk
 *.aab
+valjalase/
 .gradle/
 build/
 android/build/

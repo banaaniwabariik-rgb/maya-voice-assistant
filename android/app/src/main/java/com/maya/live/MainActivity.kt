@@ -49,6 +49,12 @@ import java.io.FileInputStream
 
 class MainActivity : AppCompatActivity() {
 
+    // MAYA: tokeni hoidla võti. Sama nime kasutab CallWatcherService.
+    companion object {
+        const val MAYA_PREFS = "maya_auth"
+        const val MAYA_TOKEN_KEY = "token"
+    }
+
     private val REQUEST_CODE_RINGTONE = 9901
 
     @Deprecated("Deprecated in Java")
@@ -392,6 +398,35 @@ class MainActivity : AppCompatActivity() {
          * need teenused on VALIKULISED ja kui neid ei jookse, siis
          * vastav funktsioon lihtsalt vaikib.
          */
+        /**
+         * MAYA AUTENTIMISTOKEN.
+         *
+         * Token elab Androidi `SharedPreferences`-is (rakenduse
+         * privaatses salvestuses), MITTE veebikihi localStorage'is.
+         * Nii saab ka `CallWatcherService` – mis töötab taustal ilma
+         * WebView'ta – sama tokeni kätte ja SSE ühenduse autentida.
+         *
+         * Serveri aadressi ja tokenit EI logita kunagi täies pikkuses.
+         */
+        @JavascriptInterface
+        fun getAuthToken(): String =
+            getSharedPreferences(MAYA_PREFS, Context.MODE_PRIVATE)
+                .getString(MAYA_TOKEN_KEY, "") ?: ""
+
+        @JavascriptInterface
+        fun setAuthToken(token: String) {
+            getSharedPreferences(MAYA_PREFS, Context.MODE_PRIVATE)
+                .edit().putString(MAYA_TOKEN_KEY, token).apply()
+            Log.d("MAYA", "Autentimistoken salvestatud (" +
+                    (if (token.isEmpty()) "tühi" else "pikkus ${token.length}") + ")")
+        }
+
+        @JavascriptInterface
+        fun clearAuthToken() {
+            getSharedPreferences(MAYA_PREFS, Context.MODE_PRIVATE)
+                .edit().remove(MAYA_TOKEN_KEY).apply()
+        }
+
         @JavascriptInterface
         fun getBaseUrls(): String {
             val base = BuildConfig.MAYA_BASE_URL.trimEnd('/')

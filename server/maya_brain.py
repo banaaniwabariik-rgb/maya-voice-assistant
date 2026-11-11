@@ -15,6 +15,9 @@ if False:  # .env laaditakse nüüd config.py kaudu
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 TZ = ZoneInfo("Europe/Tallinn")
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 
 def fetch_elering_data():
@@ -187,7 +190,7 @@ def get_stored_memory_and_knowledge(persona: str = "") -> str:
     """
     parts = []
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='memory'")
         if c.fetchone():

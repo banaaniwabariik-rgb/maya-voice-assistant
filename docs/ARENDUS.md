@@ -61,6 +61,23 @@ for f in sorted(pathlib.Path("server").glob("*.py")):
 PY
 ```
 
+## Autentimise testid
+
+```bash
+python3 tests/tests_autentimine.py                    # kõik 43
+python3 tests/tests_autentimine.py TestEraldatus      # ainult eraldatus
+```
+
+Need katavad: paroolide räsimise, tokenite elutsükli, kasutajate
+eraldatuse (üks ei näe teise andmeid), HTTP-kihi (FastAPI
+`TestClient`), AST-kontrolli selle kohta, et **iga** `/api` otspunkt
+nõuab autentimist, ja kiiruspiirangu.
+
+`tests_autentimine.py::test_40` on kõige olulisem: see käib AST-iga
+üle `web_maya.py` ja kukub läbi, kui mõni otspunkt jääb ilma
+`noua_kasutaja`/`noua_admin` sõltuvust. **Uue otspunkti lisamisel
+jookseb see test automaatselt läbi kukkuma, kuni lisad autentimise.**
+
 ## Privaatsuse kontroll enne commit'i
 
 ```bash
@@ -109,3 +126,9 @@ Head esimesed panused:
 - **Mitme seadme tugi.** SSE jõuab kõigi klientideni; seadmehaldust ei ole.
 - **`agent_memory.db`** oli originaalis olemas, aga ükski moodul seda ei
   kasuta (pärand vanemast Telegrami-botist). Avalikus koopias ei ole.
+- **HTTPS puudub.** Autentimine kaitseb volitamata kasutaja eest,
+  mitte pealtkuulamise eest. Pöördproksi juhend on
+  [TURVALISUS.md](TURVALISUS.md)-s, aga sisseehitatud TLS-i ei ole.
+- **FCM / APNs puudub.** Kõneteated käivad SSE kaudu. Analüüs ja
+  juhend, kui keegi tahab FCM-i lisada: [KONEALGATUS.md](KONEALGATUS.md).
+- **Kiuruspiirang on protsessipõhine.** `workers > 1` korrutab piirangu.

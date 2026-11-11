@@ -58,7 +58,39 @@ keytool -genkey -v -keystore minu.keystore -alias maya \
 Hoia see **väljaspool hoidlat** (`.gitignore` blokeerib `*.keystore`,
 `*.jks` ja `keystore.properties`).
 
-## 3. Load
+## 3. Sisselogimine
+
+Rakendus näitab käivitamisel **sisselogimisekraani**, kuni kehtiv
+token puudub. Server nõuab autentimist kõigil otspunktidel.
+
+- **Esimene kord:** vajuta „Loo uus konto". Esimene konto saab
+  selles paigalduses admin-õigused.
+- Parool peab olema vähemalt 10 märki.
+- Token salvestub `SharedPreferences`-i (rakenduse privaatne ala) ja
+  kehtib 30 päeva.
+
+Tokeni voog:
+
+```
+Sisselogimisekraan (index.html)
+      │  POST /api/auth/login
+      ▼
+MayaAuth.set(token)
+      │  AndroidBridge.setAuthToken()
+      ▼
+SharedPreferences "maya_auth" / "token"
+      ├──► fetch'i ümbris lisab: Authorization: Bearer <token>
+      ├──► WebSocket URL: ?token=<token>   (käepigistus ei luba päist)
+      └──► CallWatcherService: Authorization: Bearer <token>
+```
+
+**Token ei jõua kunagi `localStorage`-isse** – nii saab ka taustal
+töötav `CallWatcherService` selle kätte.
+
+Kui server vastab 401, kustutab teenus tokeni ja ootab uut
+sisselogimist – ta ei pommi serverit tsüklis.
+
+## 4. Load
 
 `AndroidManifest.xml` küsib:
 
@@ -73,7 +105,7 @@ Hoia see **väljaspool hoidlat** (`.gitignore` blokeerib `*.keystore`,
 
 Esimesel käivitamisel anna mikrofoni ja kaamera load.
 
-## 4. Akusäästu erand — KOHUSTUSLIK kõnefunktsiooni jaoks
+## 5. Akusäästu erand — KOHUSTUSLIK kõnefunktsiooni jaoks
 
 Androidi akuhaldus tapab taustateenused. Ilma erandita **Maya ei saa
 sulle helistada**, kui ekraan on kustunud.
@@ -83,7 +115,7 @@ sulle helistada**, kui ekraan on kustunud.
 Xiaomi/Redmi, Huawei, OnePlus ja Samsung teevad seda eriti
 agressiivselt — otsi ka „Autostart" ja „Lukusta rakendus" sätteid.
 
-## 5. Kaamera kvaliteet
+## 6. Kaamera kvaliteet
 
 Kaadrid saadetakse Geminile seansi taustal. Väärtused on
 `app/src/main/assets/index.html`-is:
@@ -99,11 +131,14 @@ Mõõdetud: kvaliteet 0,5 ja 480 px andis 0,069 baiti piksli kohta ja
 mudel ütles „pime pilt". 768 px + 0,85 andis 0,169 B/px ja kirjeldas
 pilti korrektselt. Kaamera tõstab vastamise latentsust ~0,5 s võrra.
 
-## 6. Tõrkeotsing
+## 7. Tõrkeotsing
 
 | Sümptom | Põhjus |
 |---|---|
 | „Ei saa serveriga ühendust" | vale `mayaBaseUrl`; kontrolli `adb shell ping <ip>` |
+| Sisselogimine: „Sisselogimine nurjus" | vale parool, või server ei jookse |
+| Sisselogimisekraan tuleb iga kord | token ei salvestu – kontrolli, et `AndroidBridge` on olemas (ainult APK-s, mitte brauseris) |
+| Kõne ei jõua kohale pärast sisselogimist | vt `adb logcat \| grep CallWatcher` – kui seal on „Token puudub", logi rakenduses uuesti sisse |
 | Maya ei helista | akusäästu erand puudub või foreground-teenus tapetud |
 | Mikrofon vaikib | luba puudub, või kajavärav saadab nulle (vt serveri logi „läbinisti vaiksed") |
 | Heli kokutab | võrgu jitter; vt `JITTER_BUFFER_S` index.html-is |

@@ -62,6 +62,9 @@ BASE_DIR = str(config.JUUR)
 ENV_PATH = os.path.join(BASE_DIR, ".env")
 MEMORY_PATH = os.path.join(BASE_DIR, "memory.json")
 KNOWLEDGE_PATH = os.path.join(BASE_DIR, "knowledge.json")
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 STATE_PATH = os.path.join(BASE_DIR, "agent_state.json")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
@@ -223,7 +226,7 @@ def save_state(state: dict):
 
 # --- ANDMEBAAS ---
 def init_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS reminders (
@@ -263,7 +266,7 @@ def init_db():
     conn.close()
 
 def add_reminder(trigger_time_iso: str, reminder_text: str):
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO reminders (trigger_time, reminder_text, is_done) VALUES (?, ?, 0)",
@@ -274,7 +277,7 @@ def add_reminder(trigger_time_iso: str, reminder_text: str):
 
 def get_due_reminders():
     now_iso = datetime.datetime.now(ZoneInfo("Europe/Tallinn")).strftime("%Y-%m-%d %H:%M")
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute(
         "SELECT id, trigger_time, reminder_text FROM reminders WHERE trigger_time <= ? AND is_done = 0",
@@ -286,7 +289,7 @@ def get_due_reminders():
 
 def auto_expire_old_reminders():
     now_iso = datetime.datetime.now(ZoneInfo("Europe/Tallinn")).strftime("%Y-%m-%d %H:%M")
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("UPDATE reminders SET is_done = 1 WHERE trigger_time < ? AND is_done = 0", (now_iso,))
     conn.commit()
@@ -297,7 +300,7 @@ def get_upcoming_reminders(limit_days=7) -> str:
     now_iso = now.strftime("%Y-%m-%d %H:%M")
     end_iso = (now + datetime.timedelta(days=limit_days)).strftime("%Y-%m-%d 23:59")
     
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute(
         "SELECT trigger_time, reminder_text FROM reminders WHERE trigger_time >= ? AND trigger_time <= ? AND is_done = 0 ORDER BY trigger_time ASC",
@@ -311,7 +314,7 @@ def get_upcoming_reminders(limit_days=7) -> str:
     return "Eelseisvad sündmused ja meeldetuletused:\n" + "\n".join(lines)
 
 def mark_reminder_done(reminder_id: int):
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("UPDATE reminders SET is_done = 1 WHERE id = ?", (reminder_id,))
     conn.commit()
@@ -320,7 +323,7 @@ def mark_reminder_done(reminder_id: int):
 # --- OSTUNIMEKIRI ---
 def add_shopping_items(items: list):
     now_iso = datetime.datetime.now(ZoneInfo("Europe/Tallinn")).strftime("%Y-%m-%d %H:%M")
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     for it in items:
         clean_it = it.strip().capitalize()
@@ -330,7 +333,7 @@ def add_shopping_items(items: list):
     conn.close()
 
 def get_shopping_items() -> list:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("SELECT id, item FROM shopping_list ORDER BY id ASC")
     rows = cur.fetchall()
@@ -338,7 +341,7 @@ def get_shopping_items() -> list:
     return rows
 
 def remove_shopping_item_by_name(query: str) -> bool:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("SELECT id, item FROM shopping_list")
     rows = cur.fetchall()
@@ -352,7 +355,7 @@ def remove_shopping_item_by_name(query: str) -> bool:
     return False
 
 def clear_shopping_list():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = config.connect(timeout=10)
     cur = conn.cursor()
     cur.execute("DELETE FROM shopping_list")
     conn.commit()
@@ -388,7 +391,7 @@ def log_conversation_turn(user_text: str, reply_text: str):
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         date_str = now.strftime("%Y-%m-%d")
         weekday_str = now.strftime("%A")
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO conversation_archive (timestamp, date_str, weekday_str, user_text, reply_text)
@@ -407,7 +410,7 @@ def lookup_past_conversations(user_query: str) -> str:
         return ''
 
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         cur = conn.cursor()
         words = [re.sub(r'[^a-zA-ZõäöüÕÄÖÜ0-9]', '', w) for w in q_lower.split()]
         words = [w for w in words if len(w) >= 4 and w not in ['millest', 'kuidas', 'rääkisime', 'mäletad', 'olime', 'oleme', 'tegid']]

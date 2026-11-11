@@ -139,6 +139,58 @@ import memory_fts
 
 live_router = APIRouter()
 
+# =====================================================================
+# AUTENTIMINE (avaliku versiooni lisa)
+# =====================================================================
+# Originaalis olid need otspunktid ja WebSocket täiesti lahti: kes
+# serverini jõudis, sai avada Gemini Live seansi SINU võtmega ja
+# lugeda SINU mälu. Nüüd nõuavad kõik autentimist.
+import auth as _auth
+from fastapi import Depends as _Depends, Header as _Header
+from fastapi import HTTPException as _HTTPException
+from fastapi.security import HTTPAuthorizationCredentials as _Cred
+from fastapi.security import HTTPBearer as _HTTPBearer
+
+Depends = _Depends
+_bearer_ws = _HTTPBearer(auto_error=False)
+
+
+async def _noua_kasutaja_ws(request: Request,
+                            cred: _Cred = _Depends(_bearer_ws),
+                            x_maya_token: str = _Header(None)) -> dict:
+    """HTTP otspunktide autentimine selles routeris."""
+    if not _auth.API_PIIRANG.luba(
+            f"u{config.aktiivne_kasutaja()}" if config.aktiivne_kasutaja()
+            else f"ip{getattr(request.client, 'host', '?')}"):
+        raise _HTTPException(429, "Liiga palju päringuid.")
+    token = _auth.token_paringust(
+        authorization=(f"Bearer {cred.credentials}" if cred else None),
+        x_maya_token=x_maya_token,
+        query_token=request.query_params.get("token"))
+    k = _auth.kasutaja_tokenist(token)
+    if not k:
+        raise _HTTPException(401, "Autentimine nurjus.",
+                             headers={"WWW-Authenticate": "Bearer"})
+    request.state.maya_ctx = config.sea_aktiivne_kasutaja(k["id"])
+    return k
+
+
+def _ws_kasutaja(websocket) -> dict | None:
+    """WebSocketi autentimine.
+
+    WebSocketi käepigistus ei luba Androidi WebView'l kohandatud
+    päiseid lisada, seega token tuleb query-parameetrist `?token=`.
+    Päist aktsepteerime samuti, kui klient selle saadab.
+    """
+    try:
+        token = _auth.token_paringust(
+            authorization=websocket.headers.get("authorization"),
+            x_maya_token=websocket.headers.get("x-maya-token"),
+            query_token=websocket.query_params.get("token"))
+        return _auth.kasutaja_tokenist(token)
+    except Exception:
+        return None
+
 # Taustal jooksvad mälukonsolideerimise ülesanded (tugevad viited, et
 # asyncio ei koristaks pooleliolevat kirjutust kõne lõppedes).
 _PENDING_MEMORY_TASKS = set()
@@ -479,7 +531,9 @@ def read_billing_snapshot() -> dict:
 
 
 @live_router.get("/api/voice_test")
-async def voice_test_endpoint(text: str = "Tere {USER}. Mina olen varuhääl ja võtan kõne üle, kui Maya ei saa rääkida."):
+async def voice_test_endpoint(
+        text: str = "Tere {USER}. Mina olen varuhääl ja võtan kõne üle, kui Maya ei saa rääkida.",
+        kasutaja: dict = Depends(_noua_kasutaja_ws)):
     """Tagastab varuhääle proovi toorana PCM 24 kHz (sama vorming mis Maya heli).
 
     Klient mängib selle läbi sama heliahela, mida kasutab kõnes – nii kuuled
@@ -493,7 +547,7 @@ async def voice_test_endpoint(text: str = "Tere {USER}. Mina olen varuhääl ja 
 
 
 @live_router.get("/api/billing_state")
-async def billing_state_endpoint():
+async def billing_state_endpoint(kasutaja: dict = Depends(_noua_kasutaja_ws)):
     """Tagastab jooksva jäägi ja telemeetria ilma seanssi avamata.
 
     Kasutab klient rakenduse käivitamisel, ooterežiimis perioodiliselt ja
@@ -513,6 +567,9 @@ if not api_key:
                         api_key = line.strip().split("=", 1)[1].strip('"\'')
                         break
 
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 
 def schedule_call(delay_seconds: int, topic: str) -> str:
@@ -537,7 +594,7 @@ def get_reminders(date_query: str = "") -> str:
     """
     print(f"--> [LIVE WS TÖÖRIIST KÄIVITUS]: get_reminders kuupäev='{date_query}'", flush=True)
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         if date_query:
             c.execute(
@@ -583,7 +640,7 @@ def tool_set_user_name(name: str) -> str:
     # õigesti ainult ühe sõnastuse puhul neljast.
     try:
         import sqlite3
-        conn = sqlite3.connect(memory_engine.DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         try:
             memory_fts.ensure_schema(conn)
             n = memory_fts.retire_name_facts(conn, (res["old"], res["new"]))
@@ -630,7 +687,7 @@ def tool_email() -> str:
 def ensure_reminder_persona_column():
     """Lisab reminders-tabelisse 'persona' veeru, kui seda veel pole (idempotentne)."""
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         cols = [r[1] for r in c.execute("PRAGMA table_info(reminders)").fetchall()]
         if "persona" not in cols:
@@ -654,7 +711,7 @@ def add_reminder(trigger_time: str, topic: str, custom_speech: str = "", persona
     print(f"--> [LIVE WS TÖÖRIIST KÄIVITUS]: add_reminder aeg='{trigger_time}', teema='{topic}', speech='{speech_text}'", flush=True)
     try:
         ensure_reminder_persona_column()
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute(
             "INSERT INTO reminders (trigger_time, reminder_text, custom_speech, is_done, repeat_type, persona) "
@@ -1873,8 +1930,24 @@ class ClientSilenceWatchdog:
 
 @live_router.websocket("/ws/live_maya")
 async def websocket_live_maya(websocket: WebSocket):
+    # --- AUTENTIMINE ENNE KÕIKE MUUD ------------------------------
+    # Ilma kehtiva tokenita me seanssi EI AVA. See on ainus koht, kus
+    # Gemini Live seanss (ja sellega sinu API võti ning mälu) üldse
+    # avaneb, seega kontroll peab olema siin ja kõige ees.
+    _kasutaja = _ws_kasutaja(websocket)
+    if not _kasutaja:
+        # 1008 = policy violation. Kliendile ütleme põhjuse, aga
+        # ühtegi detaili kasutajate ega tokenite kohta ei avalda.
+        await websocket.close(code=1008, reason="Autentimine nurjus")
+        print("--> [LIVE WS]: Ühendus keelatud – autentimine nurjus",
+              flush=True)
+        return
+    # Kogu ülejäänud seanss jookseb SELLE kasutaja andmebaasiga.
+    _kasutaja_ctx = config.sea_aktiivne_kasutaja(_kasutaja["id"])
     await websocket.accept()
-    print("--> [LIVE WS]: Klient ühendatud", flush=True)
+    print(f"--> [LIVE WS]: Klient ühendatud "
+          f"(kasutaja #{_kasutaja['id']} {_kasutaja['username']})",
+          flush=True)
 
     # Arvutame täpse kohaliku aja
     now_dt = datetime.datetime.now(ZoneInfo("Europe/Tallinn"))
@@ -4209,6 +4282,11 @@ async def websocket_live_maya(websocket: WebSocket):
                       flush=True)
         for _l in _lopetajad:
             _l()
+        # Vabasta kasutajakontekst (vt config.sea_aktiivne_kasutaja).
+        try:
+            config.taasta_aktiivne_kasutaja(_kasutaja_ctx)
+        except Exception:
+            pass
         # Kuluarvestus salvestatakse enne mälu konsolideerimist: server/ variandis
         # ei kutsutud save_session() kunagi välja, mistõttu jääki ei kirjutatud
         # kunagi faili ja iga uus seanss alustas samast numbrist.

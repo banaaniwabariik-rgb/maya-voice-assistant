@@ -93,12 +93,96 @@ Täpne väljakutse kuju sõltub marsruudi definitsioonist — vaata
 4. **Telefon peab serverini jõudma.** Sama võrk või privaatvõrk.
 5. **SSE ühendus peab püsima.** Server saadab iga 20 s keepalive'i.
 
+## Autentimine
+
+SSE-vool **nõuab kehtivat tokenit** ja igal kasutajal on **oma
+järjekord**:
+
+```
+GET /api/call_events
+Authorization: Bearer <token>
+```
+
+`CallWatcherService` loeb tokeni Androidi `SharedPreferences`-ist
+(sama hoidla, mida kasutab `MainActivity`). Kui token puudub või
+server vastab 401/403, teenus **ei ürita tsüklis uuesti** – ta ootab
+10–15 s ja kustutab aegunud tokeni, kuni kasutaja uuesti sisse logib.
+
+Varem oli üks globaalne järjekord: igaüks, kes serverini jõudis, sai
+helistada **igale** ühendatud telefonile ja iga telefon nägi **kõiki**
+kõnesündmusi. Nüüd on see võimatu – vt
+[TURVALISUS.md](TURVALISUS.md).
+
+## SSE vs Firebase Cloud Messaging — uuritud ja otsustatud
+
+**Otsus: jääme SSE juurde. FCM-i me EI lisa.**
+
+### Mida mõõtsime ja vaatasime
+
+Androidi klient on juba maksimaalselt karastatud:
+
+| Mehhanism | Olemas |
+|---|---|
+| `foreground service` püsiva teatega | ✅ `startForeground(1001, …, FOREGROUND_SERVICE_TYPE_MICROPHONE)` |
+| `PARTIAL_WAKE_LOCK` (CPU ei maga) | ✅ `MayaLive::CpuKeepAlive` |
+| Ekraani äratamine kõne saabumisel | ✅ `MayaLive::ScreenWakeLock` |
+| Taasühendumine katkestuse järel | ✅ `while (isRunning)` + 3 s paus |
+| Serveripoolne keepalive | ✅ iga 20 s `: keepalive` |
+| `USE_FULL_SCREEN_INTENT` kõneekraaniks | ✅ deklareeritud |
+
+Foreground-teenus on **just see** Androidi mehhanism, mis tohib
+taustal püsivat võrguühendust hoida. Võrdlusseadmel (OnePlus 6,
+Android 11) töötab see koos akusäästu erandiga.
+
+### Millal SSE EI OLE piisav
+
+| Olukord | SSE | FCM kõrge prioriteediga |
+|---|---|---|
+| Rakendus taustal, ekraan kustunud, akusäästu erand **antud** | ✅ töötab | ✅ |
+| Akusäästu erand **puudub** | ⚠️ OEM ROM (Xiaomi, Huawei, OnePlus) võib teenuse tappa | ✅ ärataks siiski |
+| Seade sügavas Doze'is mitu tundi | ⚠️ ühendus võib katkeda, taasühendumine võtab kuni 3 s + võrgu aja | ✅ |
+| Rakendus kasutaja poolt „force stop" | ❌ | ❌ (FCM samuti ei ärata) |
+
+### Miks me FCM-i siiski ei lisa
+
+1. **Iga paigaldaja peaks looma oma Firebase projekti** ja panema
+   `google-services.json` faili – see on self-hosted projekti jaoks
+   suur lisasamm ja uus väline sõltuvus Google'i konsoolile.
+2. **Server vajaks FCM-i serverivõtit** ja saatjakoodi – veel üks
+   saladus, mida hallata.
+3. **Põhiomadus ei tohi muutuda.** FCM-teade üksi **ei ava**
+   kõneekraani; selleks peab teade ikkagi käivitama
+   `IncomingCallActivity`. Ehk FCM asendaks ainult *transpordi*, mitte
+   loogika – ja transport töötab juba.
+4. **Akusäästu erand lahendab 95% juhtudest** ja see on üks
+   seadistus, mille paigaldaja teeb nagunii ära.
+
+### Kui keegi tahab FCM-i siiski lisada
+
+See on hea panus. Vajalik:
+
+1. Firebase projekt + `google-services.json` → `android/app/`
+2. `com.google.gms:google-services` plugin + `firebase-messaging`
+3. `FirebaseMessagingService` alamklass, mis käivitab
+   `IncomingCallActivity` (sama Intent, mis praegu SSE harus)
+4. Seadmetokeni registreerimine: uus otspunkt
+   `POST /api/push/register` (autenditud, salvestab tokeni kasutaja
+   kirje juurde)
+5. Serveripoolne saatja: `kone_jarjekord(uid)` kõrvale teine väljund,
+   mis saadab FCM-i. Praegune struktuur toetab seda ilma
+   ümberkirjutamist.
+6. **SSE peab alles jääma** varuteena ja arenduse jaoks (`localhost`).
+
+Sama muster teeks hiljem võimalikuks ka iOS-i APNs-i — vt
+[IOS.md](IOS.md).
+
 ## Teadaolevad piirangud
 
-- **Autentimist ei ole.** Igaüks, kes serverini pääseb, saab sulle
-  helistada. Vt [SEADISTAMINE.md](SEADISTAMINE.md) turvajaotist.
-- **Üks seade.** SSE jõuab kõigi ühendatud klientideni; mitme telefoni
-  haldust ei ole.
+- **Mitu seadet ühe konto kohta:** SSE jõuab kõigi ühendatud
+  klientideni, kes on **selle kasutaja** tokeniga sisse loginud.
+  Seadmehaldust (millisele telefonile helistada) ei ole.
+- **Akusäästu erand on kohustuslik.** Ilma selleta tapab Android
+  teenuse ja kõne ei jõua kohale.
 - **Avalikus koopias EI OLE see päris seadmes läbi testitud.** Kood on
   originaaliga sama, aga sinu telefon, Androidi versioon ja võrk on
   erinevad. Vt README jaotist „Mis siin EI ole".

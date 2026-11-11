@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Turvaauk
+    url: https://github.com/SINU_KASUTAJA/SINU_REPO/security/advisories/new
+    about: "ÄRA ava turvaaugu kohta avalikku issue't. Kasuta privaatset teatamist."
+  - name: 💬 Küsimus või arutelu
+    url: https://github.com/SINU_KASUTAJA/SINU_REPO/discussions
+    about: "Küsimused ja ideed käivad Discussions'isse, mitte issue'desse."

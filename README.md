@@ -32,6 +32,7 @@ Androidi rakendus.
 | **Kaamera** | Maya näeb kaamerapilti ja kommenteerib seda |
 | **Laulmine** | laulusõnade otsing, helistik ja tempo, rida-realt esitus |
 | **Igapäevased tööriistad** | veebiotsing, lehtede ja PDF-ide lugemine, YouTube'i subtiitrid, e-post |
+| **Mitu kasutajat** | igal kasutajal oma konto ja oma eraldi andmebaas |
 
 ---
 
@@ -50,6 +51,16 @@ python3 server/init_db.py            # loo tühi andmebaas
 
 cd server && python3 web_maya.py     # server käivitub pordil 8000
 ```
+
+Seejärel loo esimene konto — **esimene konto saab admin-õigused**:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/register \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"sinu_nimi","password":"vahemalt_10_margi_pikk_parool"}'
+```
+
+Või tee seda Androidi rakenduse sisselogimisekraanil („Loo uus konto").
 
 Seejärel ehita Androidi rakendus — vt **[docs/ANDROID.md](docs/ANDROID.md)**.
 
@@ -82,6 +93,9 @@ rakenduse parool (e-post).
 | [docs/KONEALGATUS.md](docs/KONEALGATUS.md) | kuidas karakteri algatatud kõne töötab |
 | [docs/KARAKTERID.md](docs/KARAKTERID.md) | oma karakterite kirjutamine |
 | [docs/ARHITEKTUUR.md](docs/ARHITEKTUUR.md) | moodulid, vestluse elutsükkel, mälu |
+| [docs/TURVALISUS.md](docs/TURVALISUS.md) | autentimine, kasutajate eraldatus, mida kaitse katab |
+| [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md) | sõltuvused ja nende litsentsid |
+| [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm – arhitektuursed kaalutlused |
 | [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, panustamine |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada |
 | [SECURITY.md](SECURITY.md) | turvaaukude teatamine |
@@ -90,22 +104,21 @@ rakenduse parool (e-post).
 
 ## ⚠️ Turvahoiatus — loe see läbi
 
-MAYA backendil **ei ole autentimist**. See on teadlik disainivalik:
-originaalpaigaldus elas privaatvõrgus (Tailscale), kus serverini
-pääses ainult omaniku enda telefon.
+MAYA backendil **ON autentimine**: kõik `/api` otspunktid, SSE-vool
+ja Gemini Live WebSocket nõuavad kehtivat tokenit. Iga kasutaja andmed
+(mälu, meeldetuletused, vestlused, seaded) elavad **eraldi
+andmebaasis**, nii et üks kasutaja ei saa teise andmeid näha ega talle
+helistada.
 
-**Ära pane seda serverit avalikku internetti ilma kaitset.** Kui teed
-seda, saab igaüks sinu Gemini võtmega kõnesid teha, sinu mälu lugeda
-ja sulle helistada.
-
-Soovitatud variandid:
+**Aga liiklus on endiselt HTTP, mitte HTTPS.** Autentimine kaitseb
+volitamata kasutaja eest, mitte pealtkuulamise eest. Seega:
 
 1. **Privaatvõrk** (Tailscale, WireGuard, ZeroTier) — lihtsaim ja
-   ühtlasi see, mida originaalpaigaldus kasutab.
-2. **Pöördproksi** (nginx/Caddy) HTTPS-i ja autentimisega.
+   soovitatud.
+2. **Pöördproksi** (nginx/Caddy) HTTPS-iga, kui server on avalik.
 3. **Ainult kohtvõrk** (`MAYA_HOST=127.0.0.1` + SSH-tunnel).
 
-Vt [docs/SEADISTAMINE.md](docs/SEADISTAMINE.md) jaotist „Turvalisus".
+Täielik ülevaade: **[docs/TURVALISUS.md](docs/TURVALISUS.md)**.
 
 ---
 
@@ -126,12 +139,19 @@ ehitad selle ise.
 
 ---
 
-## Litsents
+## ⚠️ Litsents on valimata
 
-MIT — vt [LICENSE](LICENSE).
+Sellel väljalaskekandidaadil **ei ole veel litsentsi** — vt
+[LITSENTS_OOTEL.md](LITSENTS_OOTEL.md). Ilma litsentsifailita kehtib
+vaikimisi „kõik õigused kaitstud", seega **hoidlat ei tohi veel
+avaldada** ja keegi ei saa koodi seaduslikult kasutada.
 
-MIT litsents katab selle projekti koodi. Gemini Live kasutamisel
-kehtivad Google'i enda tingimused ja hinnakiri.
+Sõltuvused ei piira valikut: kõik kohustuslikud on lubavate
+litsentside all (MIT/BSD/Apache-2.0), ühtegi GPL/AGPL sõltuvust ei ole
+— vt [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md).
+
+Gemini Live kasutamisel kehtivad alati Google'i enda tingimused ja
+hinnakiri, sõltumata sellest, millise litsentsi sa valid.
 
 ---
 

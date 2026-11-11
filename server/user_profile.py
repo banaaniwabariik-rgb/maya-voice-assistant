@@ -26,6 +26,9 @@ import config  # MAYA seadistus (vt server/config.py)
 import re
 import sqlite3
 
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 
 # Kohahoidja, mis promptides nime asemel seisab.
@@ -56,7 +59,7 @@ _cache = {"name": None}
 
 
 def _conn(path=None):
-    return sqlite3.connect(path or DB_PATH, timeout=10)
+    return config.connect(timeout=10, tee=path)
 
 
 def ensure_schema(conn) -> bool:

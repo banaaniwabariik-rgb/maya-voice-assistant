@@ -1,0 +1,35 @@
+name: 🛠 Paigaldusabi
+description: Ei saa MAYA-t käima
+labels: ["paigaldus"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vaata esmalt [docs/PAIGALDUS.md](../docs/PAIGALDUS.md) lõpus
+        olevat tõrkeotsingu tabelit.
+
+        **ÄRA LISA VÕTMEID.** `python3 server/config.py` väljund on
+        ohutu – see näitab ainult „seatud" või „PUUDUB".
+
+  - type: textarea
+    id: samm
+    attributes:
+      label: Mis sammul see katkeb?
+    validations:
+      required: true
+
+  - type: textarea
+    id: viga
+    attributes:
+      label: Täpne veateade
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: "`python3 server/config.py` väljund"
+      render: text
+    validations:
+      required: true

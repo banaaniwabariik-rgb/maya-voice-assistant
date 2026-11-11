@@ -43,6 +43,7 @@
 | `email_tool.py` | Gmail IMAP |
 | `global_pulse.py` | uudiste/konteksti kokkuvõtted |
 | `billing_admin.py` | krediidi ja kulu haldus |
+| `auth.py` | **autentimine, tokenid, kasutajate eraldatus** (avaliku versiooni lisa) |
 | `config.py` | **kogu seadistus ühes kohas** (avaliku versiooni lisa) |
 | `init_db.py` | tühja andmebaasi loomine (avaliku versiooni lisa) |
 

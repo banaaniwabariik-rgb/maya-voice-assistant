@@ -1,0 +1,153 @@
+name: Testid ja privaatsuskontroll
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paigalda Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Paigalda sõltuvused
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r server/requirements.txt
+          # TestClient vajab httpx'i (ainult testimiseks)
+          pip install httpx
+
+      - name: Kompileerimiskontroll
+        run: |
+          python -m compileall -q server/ tests/
+
+      - name: Loo tühi andmebaas
+        env:
+          MAYA_DATA_DIR: ${{ runner.temp }}/maya-data
+        run: python server/init_db.py --dump
+
+      - name: Kontrolli, et skeem on koodiga sünkroonis
+        env:
+          MAYA_DATA_DIR: ${{ runner.temp }}/maya-data
+        run: |
+          # init_db.py --dump kirjutab server/schema.sql. Kui see
+          # erineb commit'itust, on skeem ja kood lahku jooksnud.
+          git diff --exit-code server/schema.sql || {
+            echo "::error::server/schema.sql on aegunud. Jooksuta: python server/init_db.py --dump"
+            exit 1
+          }
+
+      - name: Backendi käivituskontroll
+        env:
+          MAYA_DATA_DIR: ${{ runner.temp }}/maya-data
+        run: |
+          cd server
+          python -c "import web_maya; print('marsruute:', len(web_maya.app.routes))"
+
+      - name: Testid
+        env:
+          MAYA_DATA_DIR: ${{ runner.temp }}/maya-data
+        run: |
+          vigu=0
+          for f in tests/tests_*.py; do
+            echo "::group::$f"
+            python "$f" || vigu=1
+            echo "::endgroup::"
+          done
+          exit $vigu
+
+  privaatsus:
+    name: Privaatsus- ja saladusekontroll
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # kogu ajalugu, et skannida ka commit'e
+
+      - name: Privaatsuskontroll
+        run: bash scripts/kontrolli_privaatsust.sh
+
+      - name: Kas .env on kogemata jälgitud?
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "::error::.env on versioonihalduses!"
+            exit 1
+          fi
+          echo "OK"
+
+      - name: Kas ajaloos on saladusi?
+        run: |
+          # Otsi võtmemustreid KÕIGIST commit'idest, mitte ainult
+          # praegusest puust. Väärtusi ei trüki.
+          leitud=$(git log -p --all 2>/dev/null \
+            | grep -cE '(AIza[0-9A-Za-z_-]{30,}|gsk_[0-9A-Za-z]{40,}|sk-[0-9A-Za-z]{30,}|ghp_[0-9A-Za-z]{30,})' || true)
+          if [ "$leitud" != "0" ]; then
+            echo "::error::Git ajaloos on $leitud võtmemustrit. Tühista võtmed!"
+            exit 1
+          fi
+          echo "Ajalugu on puhas"
+
+  android:
+    name: Androidi APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paigalda JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle vahemälu
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Ehita debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Kontrolli, et APK-s ei ole privaatseid aadresse
+        run: |
+          APK=$(find android -name "*.apk" | head -1)
+          echo "APK: $APK"
+          unzip -p "$APK" assets/index.html > /tmp/apk_index.html
+          # Vaikimisi peab olema emulaatori aadress, mitte miski muu.
+          if grep -qE '(AIza|gsk_|sk-[0-9A-Za-z]{20,})' /tmp/apk_index.html; then
+            echo "::error::APK-s on API võtme muster!"
+            exit 1
+          fi
+          if ! grep -q "MAYA_CFG" /tmp/apk_index.html; then
+            echo "::error::MAYA_CFG puudub – aadress ei ole seadistatav"
+            exit 1
+          fi
+          echo "APK on puhas"
+
+      - name: Laadi APK üles
+        uses: actions/upload-artifact@v4
+        with:
+          name: maya-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14

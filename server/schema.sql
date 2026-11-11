@@ -73,7 +73,7 @@ CREATE TABLE reminders (
             trigger_time TEXT NOT NULL,
             reminder_text TEXT NOT NULL,
             is_done INTEGER DEFAULT 0
-        );
+        , repeat_type TEXT DEFAULT 'none', custom_speech TEXT DEFAULT '', notify_type TEXT DEFAULT 'call', persona TEXT DEFAULT '');
 CREATE TABLE settings (
             key        TEXT PRIMARY KEY,
             value      TEXT NOT NULL,
@@ -91,4 +91,32 @@ CREATE INDEX idx_mem_norm ON memory(norm_key);
 CREATE INDEX idx_mem_scope ON memory(scope, persona, status);
 CREATE INDEX idx_mem_status ON memory(status);
 CREATE INDEX idx_mem_subject ON memory(subject_key, status);
+
+-- ===== users.db ==================================================
+CREATE TABLE login_attempts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            username   TEXT NOT NULL,
+            at         INTEGER NOT NULL,
+            ok         INTEGER NOT NULL
+        );
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE tokens (
+            token_hash TEXT PRIMARY KEY,
+            user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            label      TEXT NOT NULL DEFAULT ''
+        );
+CREATE TABLE users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name  TEXT NOT NULL DEFAULT '',
+            is_admin      INTEGER NOT NULL DEFAULT 0,
+            is_active     INTEGER NOT NULL DEFAULT 1,
+            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            last_login_at TEXT
+        );
+CREATE INDEX idx_attempts ON login_attempts(username, at);
+CREATE INDEX idx_tokens_user ON tokens(user_id);
 

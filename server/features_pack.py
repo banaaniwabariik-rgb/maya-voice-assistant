@@ -5,6 +5,9 @@ import requests
 import trafilatura
 from youtube_transcript_api import YouTubeTranscriptApi
 
+# ÜHILDUVUS: `DB_PATH` jääb alles nende kohtade jaoks, mis
+# vajavad teed stringina (varundus, memory_fts). AKTIIVSE
+# kasutaja tee saab alati `config.db_tee()`-st.
 DB_PATH = config.DB_TEE
 
 # ==========================================
@@ -69,7 +72,7 @@ def extract_pdf_text(file_path: str) -> str:
 # ==========================================
 def add_log_entry(entry_text: str, category: str = "üldine") -> bool:
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = config.connect()
         c = conn.cursor()
         c.execute("INSERT INTO logbook (category, entry_text) VALUES (?, ?)", (category, entry_text))
         conn.commit()
@@ -81,7 +84,7 @@ def add_log_entry(entry_text: str, category: str = "üldine") -> bool:
 
 def query_log_entries(search_term: str = "", limit: int = 10) -> list:
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = config.connect()
         c = conn.cursor()
         if search_term:
             query = "SELECT timestamp, category, entry_text FROM logbook WHERE entry_text LIKE ? ORDER BY timestamp DESC LIMIT ?"
@@ -99,7 +102,7 @@ def query_log_entries(search_term: str = "", limit: int = 10) -> list:
 def get_recent_tech_logs(limit: int = 25) -> list:
     """Tagastab viimased tehnika ja seadmete hoolduskanded."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = config.connect()
         c = conn.cursor()
         c.execute("SELECT timestamp, entry_text FROM logbook WHERE category = 'tehnika' ORDER BY timestamp DESC LIMIT ?", (limit,))
         rows = c.fetchall()

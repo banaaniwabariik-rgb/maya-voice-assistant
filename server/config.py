@@ -23,6 +23,7 @@ KÕIK SEADISTATAV ON DOKUMENTEERITUD failis ``.env.example``.
 
 from __future__ import annotations
 
+import contextvars
 import os
 import pathlib
 from typing import Optional
@@ -122,6 +123,78 @@ def env_noutud(nimi: str) -> str:
 # ole.
 DB_TEE = str(pathlib.Path(
     env("MAYA_DB_PATH", str(ANDMED / "reminders.db"))))
+
+
+# =====================================================================
+# KASUTAJAPÕHINE ERALDATUS
+# =====================================================================
+# Iga autenditud kasutaja saab OMA SQLite andmebaasi:
+#     <andmed>/users/<id>/reminders.db
+#
+# MIKS FAILISÜSTEEM JA MITTE `WHERE user_id = ?`:
+# originaalkood on 13 000 rida ja selles on kümneid SQL-päringuid.
+# Kui eraldatus sõltuks sellest, et iga päring mäletab filtrit, siis
+# piisaks ÜHEST puuduvast `WHERE`-ist, et üks kasutaja näeks teise
+# mälufakte. Eraldi failiga on see füüsiliselt võimatu ja uus
+# funktsioon ei pea `user_id`-d meeles pidama.
+#
+# Kompromiss, mille me teadlikult võtame: kasutajate vahel ei saa
+# andmeid jagada ja üle kasutajate käivaid päringuid teha ei saa.
+# Isikliku assistendi puhul on see pigem omadus kui puudus.
+_aktiivne_kasutaja: "contextvars.ContextVar[Optional[int]]" = \
+    contextvars.ContextVar("maya_aktiivne_kasutaja", default=None)
+
+
+def kasutaja_kaust(uid: int) -> pathlib.Path:
+    """Ühe kasutaja andmekaust."""
+    return ANDMED / "users" / str(int(uid))
+
+
+def sea_aktiivne_kasutaja(uid: Optional[int]):
+    """Märgi, kelle andmebaasi see päring kasutab.
+
+    Tagastab tokeni, millega saab varasema väärtuse taastada
+    (`contextvars` tava). FastAPI käsitleja iga päring jookseb omas
+    kontekstis, seega kasutajad ei saa üksteise konteksti näha ka
+    samaaegsete päringute korral.
+    """
+    return _aktiivne_kasutaja.set(None if uid is None else int(uid))
+
+
+def taasta_aktiivne_kasutaja(token) -> None:
+    try:
+        _aktiivne_kasutaja.reset(token)
+    except Exception:
+        pass
+
+
+def aktiivne_kasutaja() -> Optional[int]:
+    return _aktiivne_kasutaja.get()
+
+
+def db_tee() -> str:
+    """AKTIIVSE kasutaja andmebaasi tee.
+
+    Kui kasutajat ei ole seatud (nt taustaülesanne, CLI-skript,
+    `init_db.py`), tagastatakse ühine `DB_TEE`. Nii töötavad vanad
+    skriptid ja testid muutmata kujul.
+    """
+    uid = _aktiivne_kasutaja.get()
+    if uid is None:
+        return DB_TEE
+    kaust = kasutaja_kaust(uid)
+    kaust.mkdir(parents=True, exist_ok=True)
+    return str(kaust / "reminders.db")
+
+
+def connect(timeout: float = 10, tee: Optional[str] = None):
+    """Ava ühendus AKTIIVSE kasutaja andmebaasiga.
+
+    Kõik moodulid kasutavad seda `sqlite3.connect(DB_PATH, ...)`
+    asemel. Nii käib kasutajavahetus ühest kohast läbi.
+    """
+    import sqlite3 as _sq
+    return _sq.connect(tee or db_tee(), timeout=timeout)
 
 # =====================================================================
 # VÕRK

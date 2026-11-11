@@ -4,7 +4,7 @@ import config  # MAYA seadistus (vt server/config.py)
 def get_calendar_reminders_context():
     try:
         import sqlite3, datetime
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("""
             SELECT id, trigger_time, reminder_text, custom_speech, is_done, repeat_type, notify_type 
@@ -80,7 +80,166 @@ from google.genai import types
 
 import listen_direct as core
 
-app = FastAPI()
+app = FastAPI(
+    title="MAYA",
+    description="Eestikeelne häälassistent. Kõik /api otspunktid "
+                "nõuavad autentimist – vt docs/TURVALISUS.md.",
+)
+
+# =====================================================================
+# AUTENTIMINE JA AUTORISEERIMINE
+# =====================================================================
+# MIKS: originaalpaigaldus elas privaatvõrgus ja backendil EI OLNUD
+# autentimist. Avalikus versioonis on see auk kinni. Vt server/auth.py.
+import auth as _auth
+from fastapi import Depends, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _kliendi_voti(request: Request) -> str:
+    """Kiiruspiirangu võti: kasutaja ID, muidu IP."""
+    uid = config.aktiivne_kasutaja()
+    if uid is not None:
+        return f"u{uid}"
+    try:
+        return f"ip{request.client.host}"
+    except Exception:
+        return "ip?"
+
+
+async def noua_kasutaja(
+    request: Request,
+    cred: HTTPAuthorizationCredentials = Depends(_bearer),
+    x_maya_token: str = Header(None),
+) -> dict:
+    """FastAPI sõltuvus: KOHUSTUSLIK autentimine.
+
+    Seab ühtlasi aktiivse kasutaja, nii et `config.connect()` avab
+    ÕIGE kasutaja andmebaasi. Konteksti taastamine toimub
+    `_taasta_kontekst` middleware'is päringu lõpus.
+    """
+    if not _auth.API_PIIRANG.luba(_kliendi_voti(request)):
+        raise HTTPException(429, "Liiga palju päringuid. Oota hetk.")
+    token = _auth.token_paringust(
+        authorization=(f"Bearer {cred.credentials}" if cred else None),
+        x_maya_token=x_maya_token,
+        query_token=request.query_params.get("token"),
+    )
+    kasutaja = _auth.kasutaja_tokenist(token)
+    if not kasutaja:
+        raise HTTPException(
+            401, "Autentimine nurjus. Logi sisse POST /api/auth/login.",
+            headers={"WWW-Authenticate": "Bearer"})
+    request.state.maya_kasutaja = kasutaja
+    request.state.maya_ctx = config.sea_aktiivne_kasutaja(kasutaja["id"])
+    return kasutaja
+
+
+async def noua_admin(kasutaja: dict = Depends(noua_kasutaja)) -> dict:
+    """Ainult admin: arveldus, haldus, diagnostika."""
+    if not kasutaja.get("is_admin"):
+        raise HTTPException(403, "See otspunkt on ainult administraatorile.")
+    return kasutaja
+
+
+@app.middleware("http")
+async def _taasta_kontekst(request: Request, call_next):
+    """Vabasta kasutajakontekst päringu lõpus.
+
+    `contextvars` on päringu-põhine, aga me taastame selle siiski
+    käsitsi, et taustaülesanded ei päriks kogemata eelmise päringu
+    kasutajat.
+    """
+    vastus = await call_next(request)
+    tok = getattr(request.state, "maya_ctx", None)
+    if tok is not None:
+        config.taasta_aktiivne_kasutaja(tok)
+    return vastus
+
+
+@app.post("/api/auth/register")
+async def auth_register(request: Request):
+    """Loo konto. ESIMENE konto saab admin-õigused."""
+    if not _auth.LOGIN_PIIRANG.luba(_kliendi_voti(request)):
+        raise HTTPException(429, "Liiga palju katseid. Oota hetk.")
+    try:
+        keha = await request.json()
+    except Exception:
+        raise HTTPException(400, "Oodati JSON-keha.")
+    try:
+        k = _auth.loo_kasutaja(
+            kasutajanimi=_auth.puhasta_tekst(keha.get("username"), 32,
+                                             "username"),
+            parool=keha.get("password") or "",
+            display_name=_auth.puhasta_tekst(keha.get("display_name"), 64,
+                                             "display_name"),
+            kutsekood=_auth.puhasta_tekst(keha.get("invite_code"), 128,
+                                          "invite_code"),
+        )
+        token, kasutaja = _auth.logi_sisse(
+            k["username"], keha.get("password") or "",
+            label=_auth.puhasta_tekst(keha.get("device"), 64, "device"))
+    except _auth.AuthViga as e:
+        raise HTTPException(e.kood, e.sonum)
+    return {"token": token, "user": kasutaja,
+            "expires_in_s": _auth.TOKENI_ELUIGA_S}
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request):
+    if not _auth.LOGIN_PIIRANG.luba(_kliendi_voti(request)):
+        raise HTTPException(429, "Liiga palju katseid. Oota hetk.")
+    try:
+        keha = await request.json()
+    except Exception:
+        raise HTTPException(400, "Oodati JSON-keha.")
+    try:
+        token, kasutaja = _auth.logi_sisse(
+            _auth.puhasta_tekst(keha.get("username"), 32, "username"),
+            keha.get("password") or "",
+            label=_auth.puhasta_tekst(keha.get("device"), 64, "device"))
+    except _auth.AuthViga as e:
+        raise HTTPException(e.kood, e.sonum)
+    return {"token": token, "user": kasutaja,
+            "expires_in_s": _auth.TOKENI_ELUIGA_S}
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request,
+                      cred: HTTPAuthorizationCredentials = Depends(_bearer),
+                      x_maya_token: str = Header(None),
+                      kasutaja: dict = Depends(noua_kasutaja)):
+    token = _auth.token_paringust(
+        authorization=(f"Bearer {cred.credentials}" if cred else None),
+        x_maya_token=x_maya_token,
+        query_token=request.query_params.get("token"))
+    _auth.logi_valja(token or "")
+    return {"status": "ok"}
+
+
+@app.get("/api/auth/me")
+async def auth_me(kasutaja: dict = Depends(noua_kasutaja)):
+    return {"user": kasutaja,
+            "db": config.db_tee().replace(str(config.ANDMED), "<andmed>")}
+
+
+@app.get("/api/auth/status")
+async def auth_status():
+    """AVALIK: ütleb, kas paigaldus on juba seadistatud.
+
+    Androidi rakendus küsib seda enne sisselogimisekraani näitamist.
+    EI AVALDA kasutajanimesid ega muud infot.
+    """
+    try:
+        _auth.ensure_schema()
+        n = _auth.kasutajaid_kokku()
+    except Exception:
+        n = 0
+    return {"seadistatud": n > 0,
+            "registreerimine_lubatud": _auth.REGISTREERIMINE_LUBATUD or n == 0,
+            "kutsekood_noutud": bool(_auth.KUTSEKOOD)}
 import memory_engine
 from live_maya_ws import live_router, set_pending_call_prompt
 app.include_router(live_router)
@@ -88,20 +247,80 @@ app.include_router(live_router)
 import asyncio
 from fastapi.responses import StreamingResponse
 
-call_event_queue = asyncio.Queue()
+# =====================================================================
+# KÕNESÜNDMUSED — KASUTAJAPÕHISED JÄRJEKORRAD
+# =====================================================================
+# TURVAPARANDUS: varem oli ÜKS globaalne järjekord. See tähendas, et
+# igaüks, kes serverini jõudis, sai käivitada kõne IGA ühendatud
+# telefonile, ja iga telefon nägi KÕIKI kõnesündmusi. Nüüd on igal
+# kasutajal oma järjekord ja SSE-vool nõuab autentimist.
+_kone_jarjekorrad: dict = {}
+
+
+def kone_jarjekord(uid: int) -> asyncio.Queue:
+    q = _kone_jarjekorrad.get(int(uid))
+    if q is None:
+        q = asyncio.Queue(maxsize=50)
+        _kone_jarjekorrad[int(uid)] = q
+    return q
+
+
+# ÜHILDUVUS: vana nimi viitab nüüd aktiivse kasutaja järjekorrale.
+class _KoneJarjekordProksi:
+    """`call_event_queue.put(...)` töötab edasi, aga läheb AKTIIVSE
+    kasutaja järjekorda. Kui kasutajat ei ole (taustaülesanne enne
+    autentimist), kasutatakse omaniku (id 1) järjekorda."""
+
+    def _q(self):
+        uid = config.aktiivne_kasutaja()
+        return kone_jarjekord(uid if uid is not None else 1)
+
+    async def put(self, item):
+        q = self._q()
+        if q.full():
+            try:
+                q.get_nowait()
+            except Exception:
+                pass
+        await q.put(item)
+
+    async def get(self):
+        return await self._q().get()
+
+
+call_event_queue = _KoneJarjekordProksi()
+
 
 @app.get("/api/call_events")
-async def call_events():
+async def call_events(request: Request,
+                      kasutaja: dict = Depends(noua_kasutaja)):
+    """SSE vool, mille kaudu telefon saab teada sissetulevast kõnest.
+
+    AUTENTIMINE: token tuleb `Authorization: Bearer` päises VÕI
+    `?token=` parameetris (Androidi SSE-klient ei saa alati päist
+    lisada). Kasutaja näeb AINULT oma järjekorda.
+    """
+    uid = kasutaja["id"]
+    q = kone_jarjekord(uid)
+
     async def event_generator():
-        while True:
-            try:
-                data = await asyncio.wait_for(call_event_queue.get(), timeout=20.0)
-                yield f"data: {data}\n\n"
-            except asyncio.TimeoutError:
-                yield ": keepalive\n\n"
+        # Kontekst taastub päringu lõpus middleware'is; SSE elab
+        # kaua, seega seame kasutaja ka siia.
+        tok = config.sea_aktiivne_kasutaja(uid)
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    data = await asyncio.wait_for(q.get(), timeout=20.0)
+                    yield f"data: {data}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            config.taasta_aktiivne_kasutaja(tok)
 
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(event_generator(),
+                             media_type="text/event-stream")
 
 
 async def background_learn(user_text: str, reply_text: str):
@@ -138,11 +357,11 @@ async def background_learn(user_text: str, reply_text: str):
 
 
 @app.get("/api/briefing")
-async def get_briefing():
+async def get_briefing(kasutaja: dict = Depends(noua_kasutaja)):
     """Tagastab hommikubriifingu seade (kas sees ja mis kell)."""
     def _read():
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         try:
             cols = [r[1] for r in conn.execute("PRAGMA table_info(reminders)").fetchall()]
             sel = "trigger_time, persona" if "persona" in cols else "trigger_time, '' AS persona"
@@ -161,7 +380,7 @@ async def get_briefing():
 
 
 @app.post("/api/briefing")
-async def set_briefing(time: str = "08:00", persona: str = "asjalik", enabled: bool = True):
+async def set_briefing(time: str = "08:00", persona: str = "asjalik", enabled: bool = True, kasutaja: dict = Depends(noua_kasutaja)):
     """Lülitab hommikubriifingu sisse/välja.
 
     Briifing on tavaline IGAPÄEVANE meeldetuletus, mille notify_type='briefing'.
@@ -172,7 +391,7 @@ async def set_briefing(time: str = "08:00", persona: str = "asjalik", enabled: b
 
     def _write():
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         # vana briifing alati maha, et neid ei koguneks
         c.execute("DELETE FROM reminders WHERE notify_type = 'briefing'")
@@ -209,13 +428,13 @@ async def set_briefing(time: str = "08:00", persona: str = "asjalik", enabled: b
 
 
 @app.get("/api/briefing/preview")
-async def briefing_preview():
+async def briefing_preview(kasutaja: dict = Depends(noua_kasutaja)):
     """Näitab, mida briifing praegu sisaldaks (ei helista)."""
     return {"text": await asyncio.to_thread(build_morning_briefing)}
 
 
 @app.post("/api/trigger_call")
-async def trigger_call(reason: str = "Tähelepanu! Mayal on sulle teade."):
+async def trigger_call(reason: str = "Tähelepanu! Mayal on sulle teade.", kasutaja: dict = Depends(noua_kasutaja)):
     await call_event_queue.put(reason)
     return {"status": "ok", "message": "Kõne päästik edastatud telefoni"}
 
@@ -236,10 +455,15 @@ PERSONA_PROMPTS = {
 }
 
 
+# CORS: `allow_origins=["*"]` KOOS `allow_credentials=True`-ga on
+# vigane kombinatsioon (brauserid keelavad selle) ja ühtlasi liiga
+# lahti. Androidi WebView ei vaja CORS-i üldse; lubatud lähtekohad
+# tulevad nüüd seadistusest (MAYA_CORS_ORIGINS, komaga eraldatud).
+_cors = [x.strip() for x in (config.env("MAYA_CORS_ORIGINS", "") or "").split(",") if x.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*", "X-Maya-Text", "X-User-Text", "X-Voice-Used", "X-Voice-Fallback", "X-Voice-Fallback-Reason"],
@@ -577,7 +801,7 @@ def build_morning_briefing() -> str:
 
     # Tänased kalendrisündmused
     try:
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         today = now.strftime("%Y-%m-%d")
         rows = c.execute(
@@ -615,7 +839,7 @@ async def background_reminder_watcher():
         try:
             now_dt = datetime.datetime.now(ZoneInfo("Europe/Tallinn"))
             now_str = now_dt.strftime("%Y-%m-%d %H:%M")
-            conn = sqlite3.connect(config.DB_TEE, timeout=10)
+            conn = config.connect(timeout=10)
             c = conn.cursor()
             # 'persona' veerg lisati hiljem – loeme selle turvaliselt, et
             # vanad baasid (kus veergu veel pole) ei lõhuks valvurit.
@@ -692,10 +916,10 @@ async def background_reminder_watcher():
 # MAYA KALENDRI JA MEELDETULETUSTE REST API
 # =====================================================================
 @app.get("/api/reminders")
-async def get_all_reminders():
+async def get_all_reminders(kasutaja: dict = Depends(noua_kasutaja)):
     try:
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         rows = c.execute("""
             SELECT id, trigger_time, reminder_text, is_done, repeat_type, custom_speech 
@@ -720,7 +944,7 @@ async def get_all_reminders():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/reminders")
-async def create_reminder(req: Request):
+async def create_reminder(req: Request, kasutaja: dict = Depends(noua_kasutaja)):
     try:
         try:
             data = await req.json()
@@ -738,7 +962,7 @@ async def create_reminder(req: Request):
             return JSONResponse({"error": "Kuupäev ja teema on kohustuslikud"}, status_code=400)
 
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("""
             INSERT INTO reminders (trigger_time, reminder_text, is_done, repeat_type, custom_speech, notify_type)
@@ -754,10 +978,10 @@ async def create_reminder(req: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.delete("/api/reminders/{rem_id}")
-async def delete_reminder(rem_id: int):
+async def delete_reminder(rem_id: int, kasutaja: dict = Depends(noua_kasutaja)):
     try:
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("DELETE FROM reminders WHERE id = ?", (rem_id,))
         conn.commit()
@@ -770,7 +994,7 @@ async def delete_reminder(rem_id: int):
 
 @app.post("/api/reminders/{rem_id}/update")
 @app.put("/api/reminders/{rem_id}")
-async def update_reminder_api(rem_id: int, request: Request):
+async def update_reminder_api(rem_id: int, request: Request, kasutaja: dict = Depends(noua_kasutaja)):
     try:
         try:
             data = await request.json()
@@ -783,7 +1007,7 @@ async def update_reminder_api(rem_id: int, request: Request):
         notif_type = str(data.get("notify_type", "call")).strip()
 
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("""
             UPDATE reminders 
@@ -829,7 +1053,7 @@ pending_greeting_text = ""
 
 
 @app.get("/api/trigger_greeting")
-async def trigger_greeting(reason: str = "", fallback: bool = False):
+async def trigger_greeting(reason: str = "", fallback: bool = False, kasutaja: dict = Depends(noua_kasutaja)):
     global pending_greeting_audio, pending_greeting_text
     print(f"--> [TRIGGER GREETING REQUEST] reason='{reason}' fallback={fallback}", flush=True)
     if not fallback:
@@ -865,7 +1089,7 @@ async def trigger_greeting(reason: str = "", fallback: bool = False):
     return Response(status_code=204)
 
 @app.get("/api/check_greeting")
-async def check_greeting(fallback: bool = False):
+async def check_greeting(fallback: bool = False, kasutaja: dict = Depends(noua_kasutaja)):
     global pending_greeting_audio, pending_greeting_text
     if not fallback:
         return Response(status_code=204)
@@ -893,7 +1117,7 @@ def get_realtime_calendar_block() -> str:
     w_day = weekdays_et[now_dt.weekday()]
     try:
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("SELECT id, trigger_time, reminder_text, repeat_type FROM reminders WHERE is_done = 0 ORDER BY trigger_time ASC")
         rows = c.fetchall()
@@ -920,7 +1144,7 @@ def get_realtime_calendar_block() -> str:
 def delete_matching_reminder(user_query: str):
     try:
         import sqlite3
-        conn = sqlite3.connect(config.DB_TEE, timeout=10)
+        conn = config.connect(timeout=10)
         c = conn.cursor()
         c.execute("SELECT id, reminder_text, trigger_time FROM reminders WHERE is_done = 0")
         active = c.fetchall()
@@ -954,7 +1178,7 @@ def delete_matching_reminder(user_query: str):
         return False, f"Viga meeldetuletuse kustutamisel: {e}"
 
 @app.post("/api/chat")
-async def chat_endpoint(file: UploadFile = File(None), image: UploadFile = File(None), text: str = Form(None), voice: str = Form("maya"), persona: str = Form("asjalik"), custom_prompt: str = Form(""), device_telemetry: str = Form(None), x_voice_choice: str = Header(None)):
+async def chat_endpoint(file: UploadFile = File(None), image: UploadFile = File(None), text: str = Form(None), voice: str = Form("maya"), persona: str = Form("asjalik"), custom_prompt: str = Form(""), device_telemetry: str = Form(None), x_voice_choice: str = Header(None), kasutaja: dict = Depends(noua_kasutaja)):
     image_bytes = None
     if image:
         try:
@@ -1191,10 +1415,8 @@ KALENDRI VASTAMISE REEGLID:
     def _load_recent_history():
         import sqlite3
         out = ""
-        conn = sqlite3.connect(
-            core.DB_PATH if hasattr(core, "DB_PATH") else config.DB_TEE,
-            timeout=10,
-        )
+        # AKTIIVSE kasutaja andmebaas (vt config.db_tee()).
+        conn = config.connect(timeout=10)
         try:
             c = conn.cursor()
             tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
@@ -1384,7 +1606,7 @@ import streaming_engine
 
 
 @app.get("/stream_test")
-async def stream_test_page():
+async def stream_test_page(kasutaja: dict = Depends(noua_kasutaja)):
     from fastapi.responses import HTMLResponse
     p = str(config.JUUR / "stream_test.html")
     if os.path.exists(p):
@@ -1464,7 +1686,7 @@ async def chat_stream_endpoint(
     custom_prompt: str = Form(""),
     device_telemetry: str = Form(None),
     x_voice_choice: str = Header(None)
-):
+, kasutaja: dict = Depends(noua_kasutaja)):
     image_bytes = None
     if image:
         try:
@@ -1600,10 +1822,8 @@ async def chat_stream_endpoint(
     def _load_recent_history_stream():
         import sqlite3
         out = ""
-        conn = sqlite3.connect(
-            core.DB_PATH if hasattr(core, "DB_PATH") else config.DB_TEE,
-            timeout=10,
-        )
+        # AKTIIVSE kasutaja andmebaas (vt config.db_tee()).
+        conn = config.connect(timeout=10)
         try:
             c = conn.cursor()
             tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
@@ -1702,7 +1922,7 @@ def synthesize_mari_tts(text_to_speak: str) -> bytes:
     return b""
 
 @app.post("/api/vision_check")
-async def integrated_vision_check(file: UploadFile = File(...), voice: str = Form("mari"), persona: str = Form("asjalik")):
+async def integrated_vision_check(file: UploadFile = File(...), voice: str = Form("mari"), persona: str = Form("asjalik"), kasutaja: dict = Depends(noua_kasutaja)):
     # MARI TTS TÄIELIKULT EEMALDATUD - Live Maya vastutab kõige eest
     return {"status": "ignored"}
 

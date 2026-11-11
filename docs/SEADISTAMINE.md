@@ -75,8 +75,12 @@ Kasutatakse ainult varuteena. Kui teed on tühjad, varuteed ei kasutata.
 
 ## Turvalisus
 
-**MAYA backendil ei ole autentimist.** Kõik allolevad variandid
-lahendavad sama probleemi; vali üks.
+**MAYA backendil ON autentimine** – kõik `/api` otspunktid, SSE ja
+WebSocket nõuavad tokenit ning iga kasutaja andmed on eraldi
+andmebaasis. Täielik ülevaade: **[TURVALISUS.md](TURVALISUS.md)**.
+
+Allpool on võrgutasandi kaitse, mis katab selle, mida autentimine ei
+kata (pealtkuulamine).
 
 ### 1. Privaatvõrk (soovitatud)
 
@@ -108,9 +112,10 @@ server {
 ```
 Pane `MAYA_HOST=127.0.0.1`, et server ei kuulaks otse väljapoole.
 
-> Androidi klient ei oska praegu ise Basic-autentimist saata. Kui
-> kasutad varianti 2, tuleb see kliendile lisada — see on teadlik
-> lahtine koht ja hea esimene panus.
+> Androidi klient saadab MAYA enda tokeni `Authorization: Bearer`
+> päises. Kui lisad pöördproksisse VEEL ÜHE autentimiskihi (Basic),
+> siis seda klient saata ei oska – kaks `Authorization` päist ei
+> mahu. Kasuta pöördproksis pigem mTLS-i või IP-piirangut.
 
 ### 3. Ainult kohtvõrk
 
@@ -122,3 +127,5 @@ kõige ebamugavam.
 - Ära ava porti 8000 avalikku internetti.
 - Ära pane `GEMINI_API_KEY`-d Androidi rakendusse — ta elab AINULT serveris.
 - Ära commit'i `.env` faili. Kontrolli: `scripts/kontrolli_privaatsust.sh`
+- Kui server on avalikus võrgus, pane `MAYA_ALLOW_REGISTRATION=0`
+  pärast oma konto loomist – muidu saab igaüks endale konto teha.
