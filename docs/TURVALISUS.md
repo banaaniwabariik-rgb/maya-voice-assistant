@@ -31,9 +31,47 @@ autentimist. Nii ei saa uus otspunkt kogemata lahti jääda.
         ↓
 3. Android salvestab selle SharedPreferences'i (rakenduse privaatne ala)
         ↓
-4. HTTP:      Authorization: Bearer <token>
-   WS / SSE:  ?token=<token>   (käepigistus ei luba päist)
+4. HTTP:  Authorization: Bearer <token>        ← päis
+   SSE:   Authorization: Bearer <token>        ← päis
+   WS:    POST /api/auth/ws_ticket (päisega)
+          → ühekordne pilet, 60 s
+          → ws://.../ws/live_maya?ticket=<pilet>
 ```
+
+### Miks WebSocketil on pilet, mitte token
+
+**Uuritud 11.11.2026.** Brauseri WebSocket API konstruktor on
+`new WebSocket(url, protocols)` — **kohandatud päiseid ei saa lisada**.
+See on RFC 6455 / WHATWG spetsifikatsiooni piirang, mitte Androidi
+oma. Seega `Authorization: Bearer` ei ole WebView'st võimalik ja
+midagi peab URL-i minema.
+
+Kaalutud variandid:
+
+| Variant | Hinnang |
+|---|---|
+| Pikaealine token URL-is | ❌ 30 päeva kehtiv token jõuab pöördproksi ja serveri juurdepääsulogidesse |
+| `Sec-WebSocket-Protocol` päises | ⚠️ töötab ja ei jõua URL-i, aga edastab ikkagi pikaealise tokeni |
+| **Ühekordne pilet** | ✅ **valitud** |
+
+Pileti omadused:
+
+- hangitakse **autenditud** päringuga `POST /api/auth/ws_ticket`,
+  kus token käib **päises**;
+- kehtib **60 s** (`MAYA_WS_TICKET_TTL_S`);
+- kehtib **täpselt ühe** ühenduse jaoks — lunastamine on aatomiline
+  `UPDATE … WHERE used_at IS NULL`, nii et kaks samaaegset ühendust
+  ei saa sama piletit kasutada;
+- andmebaasis hoitakse **ainult SHA-256 räsi**;
+- logidesse jäänud pilet on juba kasutatud **ja** aegunud.
+
+Mitte-brauseri kliendid (Pythoni `websockets`, CLI) **peaksid**
+kasutama `Authorization` päist — server aktsepteerib seda ka
+WebSocketil. `?token=` jääb ühilduvusteeks vanema kliendiga.
+
+Testid: `tests_autentimine.py::TestWsPiletid` (7 testi) +
+`test_43b` (pilet kontrollitakse enne tokenit) +
+`test_43c` (klient kasutab piletit).
 
 ### Paroolid
 
@@ -110,9 +148,9 @@ Aus nimekiri – need on teadlikud piirangud, mitte unustatud augud:
    eest, **mitte pealtkuulamise eest**. Samas võrgus olev ründaja
    näeb tokenit ja heli. **Lahendus:** privaatvõrk (Tailscale/
    WireGuard) või pöördproksi HTTPS-iga.
-2. **Token URL-is WS/SSE puhul.** Token võib jõuda pöördproksi
-   juurdepääsulogidesse. Androidi SSE-klient kasutab `Authorization`
-   päist; URL-i varianti vajab ainult WebSocket.
+2. **WebSocketi URL-is on pilet.** See on **teadlikult** lühiealine
+   ühekordne väärtus, mitte pikaealine token — logidesse jäänud pilet
+   on kasutu. Pikaealine token ei jõua kunagi URL-i.
 3. **Andmebaas on krüpteerimata SQLite.** Serveri failisüsteemile
    pääseja loeb kõike. Kasuta krüpteeritud ketast.
 4. **Gemini API võti elab serveris.** Serverini pääseja saab seda

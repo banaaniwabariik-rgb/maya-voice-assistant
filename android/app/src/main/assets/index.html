@@ -963,8 +963,36 @@
                 var r = await fetch(SERVER_URL + "/api/auth/status");
                 return r.ok ? r.json() : { seadistatud: false };
             }
+            // ÜHEKORDNE PILET WebSocketi jaoks.
+            // MIKS: brauseri WebSocket API ei luba `Authorization`
+            // päist (RFC 6455 piirang), seega midagi peab URL-i
+            // minema. Pilet kehtib 60 s ja AINULT ühe ühenduse jaoks,
+            // nii et logidesse jäänud URL on kohe kasutu. Pilet ise
+            // hangitakse päringuga, kus token käib PÄISES.
+            async function wsTicket() {
+                var r = await fetch(SERVER_URL + "/api/auth/ws_ticket",
+                                    { method: "POST", headers: headers() });
+                if (!r.ok) return null;
+                var d = await r.json().catch(function () { return null; });
+                return d && d.ticket ? d.ticket : null;
+            }
+            // Lisa WS URL-ile pilet; kui pileti hankimine ebaõnnestub,
+            // kukume tagasi tokenile (vanem server ei tunne piletit).
+            async function wsUrl(url) {
+                try {
+                    var t = await wsTicket();
+                    if (t) {
+                        return url + (url.indexOf("?") >= 0 ? "&" : "?") +
+                               "ticket=" + encodeURIComponent(t);
+                    }
+                } catch (e) {
+                    console.warn("WS pilet ebaõnnestus, kasutan tokenit", e);
+                }
+                return withToken(url);
+            }
             return { get: get, set: set, clear: clear, headers: headers,
-                     withToken: withToken, login: login,
+                     withToken: withToken, wsTicket: wsTicket,
+                     wsUrl: wsUrl, login: login,
                      register: register, logout: logout, me: me,
                      status: status };
         })();
@@ -1745,7 +1773,7 @@
                 // AUTENTIMINE: token läheb URL-i, sest WebSocketi käepigistus
                 // ei luba kohandatud päist. Ilma tokenita sulgeb server
                 // ühenduse koodiga 1008.
-                liveWs = new WebSocket(MayaAuth.withToken(
+                liveWs = new WebSocket(await MayaAuth.wsUrl(
                     `${wsProto}//${wsHost}/ws/live_maya?persona=${personaParam}&custom_prompt=${customParam}`));
                 liveWs.binaryType = "arraybuffer";
 

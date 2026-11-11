@@ -21,6 +21,7 @@ ajab päringud läbi päris rakenduse, aga mitte päris võrgu kaudu.
 """
 
 import ast
+import asyncio
 import os
 import pathlib
 import shutil
@@ -266,6 +267,70 @@ class TestEraldatus(unittest.TestCase):
 
 
 # =====================================================================
+# 3b. WEBSOCKETI ÜHEKORDSED PILETID
+# =====================================================================
+class TestWsPiletid(unittest.TestCase):
+    """Brauseri WebSocket API ei luba `Authorization` päist (RFC 6455
+    / WHATWG piirang). Pilet lahendab selle nii, et URL-i jõuab
+    ainult 60 s kehtiv ühekordne väärtus."""
+
+    def setUp(self):
+        _puhasta_kasutajad()
+        self.a = auth.loo_kasutaja("alice", "alice-parool-123")
+        self.b = auth.loo_kasutaja("bob", "bob-parool-12345")
+
+    def test_26_pilet_annab_oige_kasutaja(self):
+        pilet, eluiga = auth.loo_ws_pilet(self.a["id"])
+        self.assertGreater(eluiga, 0)
+        k = auth.kasuta_ws_piletit(pilet)
+        self.assertIsNotNone(k)
+        self.assertEqual(k["username"], "alice")
+
+    def test_27_pilet_tootab_TAPSELT_UKS_kord(self):
+        pilet, _ = auth.loo_ws_pilet(self.a["id"])
+        self.assertIsNotNone(auth.kasuta_ws_piletit(pilet))
+        self.assertIsNone(auth.kasuta_ws_piletit(pilet),
+                          "pilet kehtis teist korda!")
+
+    def test_28_voltsitud_pilet_ei_toimi(self):
+        pilet, _ = auth.loo_ws_pilet(self.a["id"])
+        for v in (None, "", "x", pilet + "x", pilet[:-1], "a" * 300):
+            self.assertIsNone(auth.kasuta_ws_piletit(v), repr(v)[:30])
+        # algne peab veel toimima
+        self.assertIsNotNone(auth.kasuta_ws_piletit(pilet))
+
+    def test_29_aegunud_pilet_ei_toimi(self):
+        import time
+        pilet, _ = auth.loo_ws_pilet(self.a["id"])
+        with auth._yhendus() as conn:
+            conn.execute("UPDATE ws_tickets SET expires_at = ?",
+                         (int(time.time()) - 1,))
+        self.assertIsNone(auth.kasuta_ws_piletit(pilet))
+
+    def test_29b_andmebaasis_ei_ole_piletit_ennast(self):
+        pilet, _ = auth.loo_ws_pilet(self.a["id"])
+        with auth._yhendus() as conn:
+            read = conn.execute(
+                "SELECT ticket_hash FROM ws_tickets").fetchall()
+        for (h,) in read:
+            self.assertNotEqual(h, pilet)
+            self.assertEqual(len(h), 64)
+
+    def test_29c_teise_pilet_ei_anna_minu_kontot(self):
+        pilet_b, _ = auth.loo_ws_pilet(self.b["id"])
+        k = auth.kasuta_ws_piletit(pilet_b)
+        self.assertEqual(k["id"], self.b["id"])
+        self.assertNotEqual(k["id"], self.a["id"])
+
+    def test_29d_peatatud_konto_pilet_ei_toimi(self):
+        pilet, _ = auth.loo_ws_pilet(self.a["id"])
+        with auth._yhendus() as conn:
+            conn.execute("UPDATE users SET is_active = 0 WHERE id = ?",
+                         (self.a["id"],))
+        self.assertIsNone(auth.kasuta_ws_piletit(pilet))
+
+
+# =====================================================================
 # 4. HTTP KIHT (FastAPI TestClient)
 # =====================================================================
 class TestHTTP(unittest.TestCase):
@@ -363,6 +428,25 @@ class TestHTTP(unittest.TestCase):
                                    "password": "muu-parool-123"})
         self.assertEqual(r.status_code, 409)
 
+    def test_38b_ws_pilet_nouab_autentimist(self):
+        r = self.client.post("/api/auth/ws_ticket")
+        self.assertIn(r.status_code, (401, 403))
+
+    def test_38c_ws_pilet_tuleb_ja_on_uhekordne(self):
+        token, _ = self._konto("alice")
+        h = {"Authorization": f"Bearer {token}"}
+        r = self.client.post("/api/auth/ws_ticket", headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertIn("ticket", d)
+        self.assertGreater(d["expires_in_s"], 0)
+        # token ise EI TOHI vastuses olla
+        self.assertNotIn(token, r.text)
+        # ja pilet kehtib ühe korra
+        import auth as _a
+        self.assertIsNotNone(_a.kasuta_ws_piletit(d["ticket"]))
+        self.assertIsNone(_a.kasuta_ws_piletit(d["ticket"]))
+
     def test_39_paroole_ei_tagastata_kunagi(self):
         token, _ = self._konto("alice", "minu-salajane-parool-9")
         for tee in ("/api/auth/me",):
@@ -370,6 +454,81 @@ class TestHTTP(unittest.TestCase):
                                 headers={"Authorization": f"Bearer {token}"})
             self.assertNotIn("minu-salajane-parool-9", r.text)
             self.assertNotIn("password", r.text.lower())
+
+
+# =====================================================================
+# 4b. MITU TELEFONI
+# =====================================================================
+class TestMituTelefoni(unittest.IsolatedAsyncioTestCase):
+    """MÕÕDETUD LEID 11.11.2026: üks `asyncio.Queue` kasutaja kohta
+    andis iga kõneteate AINULT ÜHELE telefonile, sest `Queue.get()`
+    on ühe tarbija semantika. Kaks telefoni sama kontoga tähendas, et
+    heliseb juhuslikult üks. Nüüd on publitseerimine fan-out."""
+
+    @classmethod
+    def setUpClass(cls):
+        import web_maya
+        cls.web = web_maya
+
+    def setUp(self):
+        _puhasta_kasutajad()
+        self.a = auth.loo_kasutaja("alice", "alice-parool-123")
+        self.b = auth.loo_kasutaja("bob", "bob-parool-12345")
+        self.web._kone_tellijad.clear()
+
+    async def test_70_kaks_telefoni_sama_kontoga_saavad_MOLEMAD(self):
+        t1 = self.web.kone_telli(self.a["id"])
+        t2 = self.web.kone_telli(self.a["id"])
+        self.assertEqual(self.web.kone_tellijaid(self.a["id"]), 2)
+        n = await self.web.kone_publitseeri(self.a["id"], "KÕNE")
+        self.assertEqual(n, 2)
+        self.assertEqual(t1.get_nowait(), "KÕNE")
+        self.assertEqual(t2.get_nowait(), "KÕNE")
+
+    async def test_71_teise_kasutaja_telefon_EI_SAA(self):
+        t_a = self.web.kone_telli(self.a["id"])
+        t_b = self.web.kone_telli(self.b["id"])
+        await self.web.kone_publitseeri(self.a["id"], "ALICE KÕNE")
+        self.assertEqual(t_a.get_nowait(), "ALICE KÕNE")
+        with self.assertRaises(asyncio.QueueEmpty):
+            t_b.get_nowait()
+
+    async def test_72_lahkunud_seade_eemaldatakse(self):
+        t1 = self.web.kone_telli(self.a["id"])
+        t2 = self.web.kone_telli(self.a["id"])
+        self.web.kone_lopeta(self.a["id"], t1)
+        self.assertEqual(self.web.kone_tellijaid(self.a["id"]), 1)
+        n = await self.web.kone_publitseeri(self.a["id"], "KÕNE")
+        self.assertEqual(n, 1)
+        self.assertEqual(t2.get_nowait(), "KÕNE")
+
+    async def test_73_ilma_seadmeid_publitseerimine_ei_viska_erindit(self):
+        n = await self.web.kone_publitseeri(self.a["id"], "KÕNE")
+        self.assertEqual(n, 0, "tellijaid ei ole, aga publitseeris")
+
+    async def test_74_tais_jarjekord_hoiab_varskeima(self):
+        q = self.web.kone_telli(self.a["id"])
+        for i in range(60):
+            await self.web.kone_publitseeri(self.a["id"], f"kone-{i}")
+        # Järjekord on piiratud; vanimad visatakse ära, aga VÄRSKEIM
+        # peab alles olema – just see on kasutaja jaoks oluline.
+        koik = []
+        while not q.empty():
+            koik.append(q.get_nowait())
+        self.assertIn("kone-59", koik)
+        self.assertLessEqual(len(koik), 50)
+
+    async def test_75_proksi_suunab_aktiivse_kasutaja_seadmetele(self):
+        t_a = self.web.kone_telli(self.a["id"])
+        t_b = self.web.kone_telli(self.b["id"])
+        tok = config.sea_aktiivne_kasutaja(self.b["id"])
+        try:
+            await self.web.call_event_queue.put("BOBI KÕNE")
+        finally:
+            config.taasta_aktiivne_kasutaja(tok)
+        self.assertEqual(t_b.get_nowait(), "BOBI KÕNE")
+        with self.assertRaises(asyncio.QueueEmpty):
+            t_a.get_nowait()
 
 
 # =====================================================================
@@ -431,7 +590,59 @@ class TestStaatiline(unittest.TestCase):
     def test_43_websocket_seab_aktiivse_kasutaja(self):
         i = WS_SRC.index("async def websocket_live_maya(")
         keha = WS_SRC[i:i + 1600]
-        self.assertIn("config.sea_aktiivne_kasutaja(_kasutaja[\"id\"])", keha)
+        # `_cfg` on alias – vt test_43d selgitust varjutuse kohta.
+        self.assertIn("_cfg.sea_aktiivne_kasutaja(_kasutaja[\"id\"])", keha)
+
+    def test_43b_ws_eelistab_piletit_tokenile(self):
+        """Pilet peab olema kontrollitud ENNE pikaealist tokenit."""
+        i = WS_SRC.index("def _ws_kasutaja(")
+        keha = WS_SRC[i:i + 2200]
+        j = keha.index("kasuta_ws_piletit")
+        k = keha.index("kasutaja_tokenist")
+        self.assertLess(j, k, "token kontrollitakse enne piletit")
+        self.assertIn('query_params.get("ticket")', keha)
+
+    def test_43c_klient_kasutab_piletit_WS_jaoks(self):
+        html = (JUUR / "android" / "app" / "src" / "main" / "assets"
+                / "index.html").read_text(encoding="utf-8")
+        self.assertIn("await MayaAuth.wsUrl(", html)
+        self.assertIn("/api/auth/ws_ticket", html)
+        # ja pileti päring ise käib PÄISEGA, mitte URL-iga
+        i = html.index("async function wsTicket()")
+        self.assertIn("headers: headers()", html[i:i + 400])
+
+    def test_43d_config_mooduli_varjutus_ei_korduks(self):
+        """MÕÕDETUD VIGA: `websocket_live_maya` sees on lokaalne muutuja
+        nimega `config` (Gemini `LiveConnectConfig`). Python teeb selle
+        nime kogu funktsiooni ulatuses lokaalseks, nii et mooduli poole
+        pöördumine viskab `UnboundLocalError`. See ilmnes alles päris
+        WebSocketi ühenduse katsel, mitte ükski varasem test ei
+        tabanud seda.
+
+        Funktsiooni sees tohib mooduli poole pöörduda AINULT `_cfg`
+        aliasega.
+        """
+        puu = ast.parse(WS_SRC)
+        read = WS_SRC.splitlines()
+        fn = None
+        for n in ast.walk(puu):
+            if isinstance(n, ast.AsyncFunctionDef) and \
+                    n.name == "websocket_live_maya":
+                fn = n
+        self.assertIsNotNone(fn, "websocket_live_maya puudub")
+        lo = fn.lineno
+        hi = max(getattr(x, "lineno", lo) for x in ast.walk(fn))
+        halvad = []
+        for i in range(lo - 1, hi):
+            r = read[i]
+            if r.strip().startswith("#"):
+                continue
+            if "config." in r and "_cfg." not in r:
+                halvad.append(f"{i + 1}: {r.strip()[:60]}")
+        self.assertEqual(halvad, [],
+                         "varjutatud `config` mooduli kasutus: %s" % halvad)
+        # ja alias peab olema olemas
+        self.assertIn("import config as _cfg", WS_SRC)
 
     def test_44_CORS_ei_ole_tahega_koos_credentialsiga(self):
         # KOMMENTAARID VÄLJA: selgitus mainib vana vigast

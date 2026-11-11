@@ -146,6 +146,21 @@ def ensure_schema() -> None:
             ok         INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_attempts ON login_attempts(username, at);
+        -- WebSocketi ÜHEKORDSED piletid.
+        -- MIKS: brauseri WebSocket API ei luba `Authorization` päist
+        -- (RFC 6455 / WHATWG piirang, mitte Androidi oma), seega token
+        -- peaks minema URL-i. URL jõuab pöördproksi ja serveri
+        -- juurdepääsulogidesse. Pilet lahendab selle: ta kehtib
+        -- 60 sekundit, ainult ÜHE ühenduse jaoks, ja ta hangitakse
+        -- autenditud HTTPS-päringuga, kus token käib päises.
+        CREATE TABLE IF NOT EXISTS ws_tickets (
+            ticket_hash TEXT PRIMARY KEY,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at  INTEGER NOT NULL,
+            expires_at  INTEGER NOT NULL,
+            used_at     INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_tickets_exp ON ws_tickets(expires_at);
         """)
 
 
@@ -385,6 +400,67 @@ def kasutaja_tokenist(token: Optional[str]) -> Optional[dict]:
         if k and k["is_active"]:
             # Odav kaitse: kui kasutaja andmebaas on kustunud või
             # konto loodi enne skeemiloogika lisamist, loo see nüüd.
+            taga_kasutaja_db(k["id"])
+            return k
+        return None
+    except Exception:
+        return None
+
+
+# =====================================================================
+# WEBSOCKETI ÜHEKORDSED PILETID
+# =====================================================================
+# Pileti eluiga. Nii lühike, et logidesse jäänud pilet on kasutu enne,
+# kui keegi jõuab logi lugeda. Nii pikk, et aeglane võrk jõuab
+# WebSocketi käepigistuse ära teha.
+PILETI_ELUIGA_S = int(config.env("MAYA_WS_TICKET_TTL_S", "60"))
+
+
+def loo_ws_pilet(uid: int) -> Tuple[str, int]:
+    """Anna ühekordne pilet WebSocketi avamiseks.
+
+    Kutsutakse AUTENDITUD HTTP-päringust, kus token käib
+    `Authorization` päises. Tagastab (pilet, eluiga_sekundites).
+    """
+    ensure_schema()
+    pilet = secrets.token_urlsafe(24)
+    nuud = int(time.time())
+    with _yhendus() as conn:
+        # Koristus: aegunud ja kasutatud piletid välja.
+        conn.execute("DELETE FROM ws_tickets WHERE expires_at < ? "
+                     "OR used_at IS NOT NULL", (nuud - 60,))
+        conn.execute(
+            "INSERT INTO ws_tickets (ticket_hash, user_id, created_at, "
+            "expires_at) VALUES (?, ?, ?, ?)",
+            (_tokeni_rasi(pilet), int(uid), nuud, nuud + PILETI_ELUIGA_S))
+    return pilet, PILETI_ELUIGA_S
+
+
+def kasuta_ws_piletit(pilet: Optional[str]) -> Optional[dict]:
+    """Lunasta pilet. Töötab TÄPSELT ÜKS kord.
+
+    Lunastamine on aatomiline `UPDATE ... WHERE used_at IS NULL`, nii
+    et kaks samaaegset ühendust ei saa sama piletit kasutada.
+    """
+    if not pilet or len(pilet) > 256:
+        return None
+    try:
+        ensure_schema()
+        nuud = int(time.time())
+        rasi = _tokeni_rasi(pilet)
+        with _yhendus() as conn:
+            cur = conn.execute(
+                "UPDATE ws_tickets SET used_at = ? "
+                "WHERE ticket_hash = ? AND used_at IS NULL "
+                "AND expires_at >= ?", (nuud, rasi, nuud))
+            if cur.rowcount != 1:
+                return None
+            r = conn.execute("SELECT user_id FROM ws_tickets "
+                             "WHERE ticket_hash = ?", (rasi,)).fetchone()
+        if not r:
+            return None
+        k = leia_kasutaja(r[0])
+        if k and k["is_active"]:
             taga_kasutaja_db(k["id"])
             return k
         return None

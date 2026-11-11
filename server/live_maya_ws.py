@@ -102,6 +102,13 @@ def set_pending_call_prompt(prompt: str, persona: str = ""):
 # (ainus tõeallikas). Need nimed jäävad alles tagasiühilduvuse pärast.
 import persona_registry
 import config  # MAYA seadistus (vt server/config.py)
+# ALIAS, MITTE DUBLIKAAT. Funktsioonis `websocket_live_maya` on
+# lokaalne muutuja nimega `config` – see on Gemini
+# `types.LiveConnectConfig` ja seda nime EI TOHI muuta (testid
+# lukustavad selle ploki). Python teeb `config` kogu funktsiooni
+# ulatuses lokaalseks, nii et mooduli poole pöördumine viskaks
+# `UnboundLocalError`. Selle funktsiooni sees kasutame `_cfg`.
+import config as _cfg
 import user_profile
 import conversation_flow
 
@@ -176,13 +183,27 @@ async def _noua_kasutaja_ws(request: Request,
 
 
 def _ws_kasutaja(websocket) -> dict | None:
-    """WebSocketi autentimine.
+    """WebSocketi autentimine, kolm teed eelistusjärjekorras.
 
-    WebSocketi käepigistus ei luba Androidi WebView'l kohandatud
-    päiseid lisada, seega token tuleb query-parameetrist `?token=`.
-    Päist aktsepteerime samuti, kui klient selle saadab.
+    1. `?ticket=` — ÜHEKORDNE pilet, eluiga 60 s, hangitud
+       autenditud päringuga `POST /api/auth/ws_ticket`. EELISTATUD.
+       Brauseri WebSocket API ei luba `Authorization` päist (RFC 6455
+       / WHATWG piirang, mitte Androidi oma), seega midagi peab URL-i
+       minema. Pilet on selleks õige asi: logidesse jäänud pilet on
+       juba kasutatud ja aegunud.
+
+    2. `Authorization: Bearer` / `X-Maya-Token` päis — mitte-brauseri
+       kliendid (nt Pythoni `websockets`, CLI tööriistad) saavad seda
+       kasutada ja peaksid.
+
+    3. `?token=` — pikaealine token URL-is. ÜHILDUVUSTEE vanema
+       kliendiga. Töötab, aga jätab tokeni logidesse; vt
+       docs/TURVALISUS.md.
     """
     try:
+        pilet = websocket.query_params.get("ticket")
+        if pilet:
+            return _auth.kasuta_ws_piletit(pilet)
         token = _auth.token_paringust(
             authorization=websocket.headers.get("authorization"),
             x_maya_token=websocket.headers.get("x-maya-token"),
@@ -1943,7 +1964,7 @@ async def websocket_live_maya(websocket: WebSocket):
               flush=True)
         return
     # Kogu ülejäänud seanss jookseb SELLE kasutaja andmebaasiga.
-    _kasutaja_ctx = config.sea_aktiivne_kasutaja(_kasutaja["id"])
+    _kasutaja_ctx = _cfg.sea_aktiivne_kasutaja(_kasutaja["id"])
     await websocket.accept()
     print(f"--> [LIVE WS]: Klient ühendatud "
           f"(kasutaja #{_kasutaja['id']} {_kasutaja['username']})",
@@ -4282,9 +4303,9 @@ async def websocket_live_maya(websocket: WebSocket):
                       flush=True)
         for _l in _lopetajad:
             _l()
-        # Vabasta kasutajakontekst (vt config.sea_aktiivne_kasutaja).
+        # Vabasta kasutajakontekst (vt _cfg.sea_aktiivne_kasutaja).
         try:
-            config.taasta_aktiivne_kasutaja(_kasutaja_ctx)
+            _cfg.taasta_aktiivne_kasutaja(_kasutaja_ctx)
         except Exception:
             pass
         # Kuluarvestus salvestatakse enne mälu konsolideerimist: server/ variandis

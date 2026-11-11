@@ -47,10 +47,13 @@ source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r server/requirements.txt
 
 cp .env.example .env                 # täida GEMINI_API_KEY
-python3 server/init_db.py            # loo tühi andmebaas
 
-cd server && python3 web_maya.py     # server käivitub pordil 8000
+./kaivita.sh                         # kontrollib eeldused, loob
+                                     # andmebaasi ja käivitab serveri
 ```
+
+`kaivita.sh` ütleb ka välja aadressi, mille Androidi APK-sse panna.
+Ainult aadressi küsimiseks: `./kaivita.sh --ip`
 
 Seejärel loo esimene konto — **esimene konto saab admin-õigused**:
 
@@ -94,11 +97,35 @@ rakenduse parool (e-post).
 | [docs/KARAKTERID.md](docs/KARAKTERID.md) | oma karakterite kirjutamine |
 | [docs/ARHITEKTUUR.md](docs/ARHITEKTUUR.md) | moodulid, vestluse elutsükkel, mälu |
 | [docs/TURVALISUS.md](docs/TURVALISUS.md) | autentimine, kasutajate eraldatus, mida kaitse katab |
+| [docs/MITU_SEADET.md](docs/MITU_SEADET.md) | mitu telefoni ja mitu kontot – oodatav käitumine |
+| [valjalase/PAIGALDA.md](valjalase/PAIGALDA.md) | **testimine päris telefonis: APK, käivitus, kontroll-nimekiri** |
 | [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md) | sõltuvused ja nende litsentsid |
 | [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm – arhitektuursed kaalutlused |
 | [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, panustamine |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada |
 | [SECURITY.md](SECURITY.md) | turvaaukude teatamine |
+
+---
+
+## Kohalik testimine vs avalik juurutus
+
+Need kaks on **täiesti erinevad olukorrad** ja neil on erinevad
+nõuded. Ära aja segi.
+
+| | **Kohalik testimine** | **Avalik internet** |
+|---|---|---|
+| Kus server on | sinu arvuti või koduserver | VPS, pilv, avalik IP |
+| Võrk | sama Wi-Fi või privaatvõrk (Tailscale/WireGuard) | avatud internet |
+| Protokoll | **HTTP on OK** | **HTTPS/WSS on KOHUSTUSLIK** |
+| Autentimine | piisab | piisab, aga HTTPS peab olema peal |
+| Registreerimine | `MAYA_ALLOW_REGISTRATION=1` | **`=0` või kutsekood** |
+| Pöördproksi | ei vaja | **nginx/Caddy TLS-iga** |
+| Käivitus | `./kaivita.sh` | systemd + pöördproksi |
+| Juhend | [valjalase/PAIGALDA.md](valjalase/PAIGALDA.md) | [docs/TURVALISUS.md](docs/TURVALISUS.md) |
+
+**Alusta kohalikust testimisest.** Avalikku internetti mine alles
+siis, kui HTTPS on paigas — vastasel juhul liigub sinu kõne, mälu ja
+autentimistoken avatekstina.
 
 ---
 

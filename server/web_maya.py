@@ -225,6 +225,18 @@ async def auth_me(kasutaja: dict = Depends(noua_kasutaja)):
             "db": config.db_tee().replace(str(config.ANDMED), "<andmed>")}
 
 
+@app.post("/api/auth/ws_ticket")
+async def auth_ws_ticket(kasutaja: dict = Depends(noua_kasutaja)):
+    """Anna ÜHEKORDNE pilet WebSocketi avamiseks.
+
+    Klient kutsub seda vahetult enne `new WebSocket(...)` ja paneb
+    pileti URL-i. Nii ei jõua pikaealine token kunagi URL-i ega
+    pöördproksi juurdepääsulogidesse.
+    """
+    pilet, eluiga = _auth.loo_ws_pilet(kasutaja["id"])
+    return {"ticket": pilet, "expires_in_s": eluiga}
+
+
 @app.get("/api/auth/status")
 async def auth_status():
     """AVALIK: ütleb, kas paigaldus on juba seadistatud.
@@ -254,41 +266,91 @@ from fastapi.responses import StreamingResponse
 # igaüks, kes serverini jõudis, sai käivitada kõne IGA ühendatud
 # telefonile, ja iga telefon nägi KÕIKI kõnesündmusi. Nüüd on igal
 # kasutajal oma järjekord ja SSE-vool nõuab autentimist.
-_kone_jarjekorrad: dict = {}
+# MITU SEADET ÜHE KONTOGA: iga SSE-ühendus saab OMA järjekorra ja
+# sündmus kopeeritakse KÕIGILE selle kasutaja ühendustele.
+#
+# MÕÕDETUD LEID (11.11.2026): üks `asyncio.Queue` kasutaja kohta ei
+# tööta mitme telefoniga – `Queue.get()` annab iga elemendi AINULT
+# ÜHELE tarbijale, nii et kaks telefoni sama kontoga tähendas, et
+# heliseb juhuslikult üks neist. Kasutaja ootab, et mõlemad telefonid
+# heliseksid; seega publitseerimine on nüüd fan-out.
+_kone_tellijad: dict = {}      # uid -> list[asyncio.Queue]
 
 
-def kone_jarjekord(uid: int) -> asyncio.Queue:
-    q = _kone_jarjekorrad.get(int(uid))
-    if q is None:
-        q = asyncio.Queue(maxsize=50)
-        _kone_jarjekorrad[int(uid)] = q
+def kone_telli(uid: int) -> asyncio.Queue:
+    """Registreeri UUS SSE-ühendus. Iga ühendus saab oma järjekorra."""
+    q = asyncio.Queue(maxsize=50)
+    _kone_tellijad.setdefault(int(uid), []).append(q)
     return q
 
 
-# ÜHILDUVUS: vana nimi viitab nüüd aktiivse kasutaja järjekorrale.
-class _KoneJarjekordProksi:
-    """`call_event_queue.put(...)` töötab edasi, aga läheb AKTIIVSE
-    kasutaja järjekorda. Kui kasutajat ei ole (taustaülesanne enne
-    autentimist), kasutatakse omaniku (id 1) järjekorda."""
+def kone_lopeta(uid: int, q: asyncio.Queue) -> None:
+    """Eemalda ühendus, kui telefon lahkub."""
+    read = _kone_tellijad.get(int(uid))
+    if not read:
+        return
+    try:
+        read.remove(q)
+    except ValueError:
+        pass
+    if not read:
+        _kone_tellijad.pop(int(uid), None)
 
-    def _q(self):
-        uid = config.aktiivne_kasutaja()
-        return kone_jarjekord(uid if uid is not None else 1)
 
-    async def put(self, item):
-        q = self._q()
+def kone_tellijaid(uid: int) -> int:
+    """Mitu seadet on selle kasutaja kõneteateid ootamas."""
+    return len(_kone_tellijad.get(int(uid), []))
+
+
+async def kone_publitseeri(uid: int, sisu) -> int:
+    """Saada sündmus KÕIGILE selle kasutaja seadmetele.
+
+    Tagastab, mitmele seadmele jõudis. 0 tähendab, et ükski telefon ei
+    ole ühendatud – siis kõnet ei tule ja seda on logist näha.
+    """
+    read = list(_kone_tellijad.get(int(uid), []))
+    for q in read:
         if q.full():
             try:
-                q.get_nowait()
+                q.get_nowait()        # viska vanim ära, hoia värskeim
             except Exception:
                 pass
-        await q.put(item)
+        try:
+            q.put_nowait(sisu)
+        except Exception:
+            pass
+    return len(read)
 
-    async def get(self):
-        return await self._q().get()
+
+# ÜHILDUVUS vanade kutsujatega (`call_event_queue.put(...)`).
+class _KoneJarjekordProksi:
+    """Suunab AKTIIVSE kasutaja kõigile seadmetele.
+
+    Kui kasutajat ei ole seatud (taustaülesanne, nt meeldetuletuse
+    taimer, mis käivitub enne päringut), kasutame omaniku (id 1)
+    kontot – isiklikus paigalduses on see õige vaikeväärtus.
+    """
+
+    async def put(self, item):
+        uid = config.aktiivne_kasutaja()
+        n = await kone_publitseeri(uid if uid is not None else 1, item)
+        if n == 0:
+            print(f"--> [KÕNE]: ükski seade ei ole ühendatud "
+                  f"(kasutaja #{uid if uid is not None else 1}) – "
+                  f"kõneteade jäi kohale toimetamata", flush=True)
+        return n
 
 
 call_event_queue = _KoneJarjekordProksi()
+
+
+# ÜHILDUVUS testidega: tagastab esimese tellija järjekorra või loob
+# uue. Uus kood peaks kasutama `kone_telli` / `kone_publitseeri`.
+def kone_jarjekord(uid: int) -> asyncio.Queue:
+    read = _kone_tellijad.get(int(uid))
+    if read:
+        return read[0]
+    return kone_telli(uid)
 
 
 @app.get("/api/call_events")
@@ -301,7 +363,12 @@ async def call_events(request: Request,
     lisada). Kasutaja näeb AINULT oma järjekorda.
     """
     uid = kasutaja["id"]
-    q = kone_jarjekord(uid)
+    # IGA ÜHENDUS saab oma järjekorra – nii helisevad mitu telefoni
+    # sama kontoga kõik korraga.
+    q = kone_telli(uid)
+    print(f"--> [KÕNE]: seade ühendus kõneteadetele "
+          f"(kasutaja #{uid}, seadmeid nüüd {kone_tellijaid(uid)})",
+          flush=True)
 
     async def event_generator():
         # Kontekst taastub päringu lõpus middleware'is; SSE elab
@@ -317,7 +384,11 @@ async def call_events(request: Request,
                 except asyncio.TimeoutError:
                     yield ": keepalive\n\n"
         finally:
+            kone_lopeta(uid, q)
             config.taasta_aktiivne_kasutaja(tok)
+            print(f"--> [KÕNE]: seade lahkus "
+                  f"(kasutaja #{uid}, seadmeid alles "
+                  f"{kone_tellijaid(uid)})", flush=True)
 
     return StreamingResponse(event_generator(),
                              media_type="text/event-stream")
