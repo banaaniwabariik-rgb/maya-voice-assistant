@@ -49,8 +49,8 @@ class TestOmanikuNaide(unittest.TestCase):
         ]
         facts = [
             f(101, "Peetril on tõsine pähkliallergia.", 1),
-            f(102, "Peeter käib psühholoogi juures.", 3),
-            f(103, "Peeter ostis uue auto.", 6),
+            f(102, "Jaanus käib psühholoogi juures.", 3),
+            f(103, "Jaanus ostis uue auto.", 6),
         ]
         return turns, facts
 
@@ -105,7 +105,7 @@ class TestKaitse1Voorunumber(unittest.TestCase):
 
     def abi(self, turn):
         return ps.resolve_fact_scopes(
-            self.TURNS, [f(101, "Peeter käib psühholoogi juures.", turn)],
+            self.TURNS, [f(101, "Jaanus käib psühholoogi juures.", turn)],
             "custom")
 
     def test_04_kehtiv_number_toimib(self):
@@ -252,14 +252,14 @@ class TestMudeliVaide(unittest.TestCase):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("assistant", "Ära muretse, see jääb meie vahele.")]
         r = ps.resolve_fact_scopes(
-            turns, [f(101, "Peeter käib psühholoogi juures.", 1)], "custom")
+            turns, [f(101, "Jaanus käib psühholoogi juures.", 1)], "custom")
         self.assertEqual(ulatused(r), {101: "shared"})
         self.assertEqual(r["audit"]["reject_reason"], "no_privacy_request")
 
     def test_21_mudeli_vaide_ei_piisa(self):
         turns = [v("user", "Ma käin psühholoogi juures.")]
         r = ps.resolve_fact_scopes(
-            turns, [f(101, "Peeter käib psühholoogi juures.", 1)], "custom",
+            turns, [f(101, "Jaanus käib psühholoogi juures.", 1)], "custom",
             model_claim={"private": True, "reason": "tundlik teema"})
         self.assertEqual(ulatused(r), {101: "shared"})
         self.assertTrue(r["audit"]["model_claim"])
@@ -269,7 +269,7 @@ class TestMudeliVaide(unittest.TestCase):
     def test_22_fakti_enda_tekst_ei_ole_korraldus(self):
         turns = [v("user", "Ma käin psühholoogi juures.")]
         r = ps.resolve_fact_scopes(
-            turns, [f(101, "Peeter ütles, et see jääb meie vahele.", 1)],
+            turns, [f(101, "Jaanus ütles, et see jääb meie vahele.", 1)],
             "custom")
         self.assertEqual(ulatused(r), {101: "shared"})
 
@@ -293,8 +293,8 @@ class TestSihtmark(unittest.TestCase):
                       "psühholoogi juures."),
         ]
         facts = [f(101, "Peetril on pähkliallergia.", 1),
-                 f(102, "Peeter käib psühholoogi juures.", 2),
-                 f(103, "Peeter kaalub 66 kg.", 3)]
+                 f(102, "Jaanus käib psühholoogi juures.", 2),
+                 f(103, "Jaanus kaalub 66 kg.", 3)]
         r = ps.resolve_fact_scopes(turns, facts, "mentor")
         self.assertEqual(r["audit"]["target_mode"], "explicit")
         self.assertEqual(ulatused(r),
@@ -304,7 +304,7 @@ class TestSihtmark(unittest.TestCase):
         turns = [v("user", "Ma kaalun 66 kilo."),
                  v("user", "Ära räägi teistele sellest, et mu vend istus "
                            "vangis.")]
-        r = ps.resolve_fact_scopes(turns, [f(101, "Peeter kaalub 66 kg.", 1)],
+        r = ps.resolve_fact_scopes(turns, [f(101, "Jaanus kaalub 66 kg.", 1)],
                                    "custom")
         self.assertEqual(ulatused(r), {101: "shared"})
         self.assertTrue(r["needs_clarification"])
@@ -327,8 +327,8 @@ class TestMitmetimoistetavus(unittest.TestCase):
     def test_27_kaks_fakti_samast_voorust_ei_oleta(self):
         turns = [v("user", "Ma käin psühholoogi juures ja olen palju joonud."),
                  v("user", "See jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter on palju joonud.", 1)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus on palju joonud.", 1)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(ulatused(r), {101: "shared", 102: "shared"})
         self.assertTrue(r["needs_clarification"])
@@ -338,8 +338,8 @@ class TestMitmetimoistetavus(unittest.TestCase):
     def test_28_kysimus_nimetab_molemad_kandidaadid(self):
         turns = [v("user", "Ma käin psühholoogi juures ja olen palju joonud."),
                  v("user", "See jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter on palju joonud.", 1)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus on palju joonud.", 1)]
         k = ps.resolve_fact_scopes(turns, facts, "custom")["clarify_question"]
         self.assertIn("psühholoogi", k)
         self.assertIn("joonud", k)
@@ -372,8 +372,8 @@ class TestAjalineSuund(unittest.TestCase):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("user", "See jääb meie vahele."),
                  v("user", "Ma ostsin uue auto.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter ostis uue auto.", 3)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus ostis uue auto.", 3)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(ulatused(r), {101: "persona", 102: "shared"})
         self.assertIn("after_instruction",
@@ -382,13 +382,13 @@ class TestAjalineSuund(unittest.TestCase):
     def test_32_korraldus_ei_ole_pysiv_lipp(self):
         turns = [v("user", "Ma käin psühholoogi juures.")]
         r = ps.resolve_fact_scopes(
-            turns, [f(101, "Peeter käib psühholoogi juures.", 1)], "custom")
+            turns, [f(101, "Jaanus käib psühholoogi juures.", 1)], "custom")
         self.assertEqual(ulatused(r), {101: "shared"})
 
     def test_33_juba_kasutatud_korraldust_ei_rakendata_uuesti(self):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("user", "See jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1)]
         self.assertEqual(ulatused(ps.resolve_fact_scopes(turns, facts,
                                                          "custom")),
                          {101: "persona"})
@@ -400,7 +400,7 @@ class TestAjalineSuund(unittest.TestCase):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("user", "Mul on kass."),
                  v("user", "See jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(ulatused(r), {101: "shared"})
         self.assertEqual(r["audit"]["resolution"], "no_fact_in_window")
@@ -410,8 +410,8 @@ class TestAjalineSuund(unittest.TestCase):
                  v("user", "See jääb meie vahele."),
                  v("user", "Ma olen palju joonud."),
                  v("user", "Ja see jääb ka meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter on palju joonud.", 3)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus on palju joonud.", 3)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(r["audit"]["anchor_turn"], 4)
         self.assertEqual(ulatused(r), {101: "shared", 102: "persona"})
@@ -424,8 +424,8 @@ class TestVaikimisiYhine(unittest.TestCase):
 
     def test_36_tundlikkus_ei_tekita_privaatsust(self):
         for tekst, fakt in (
-            ("Ma käin psühholoogi juures.", "Peeter käib psühholoogi juures."),
-            ("Ma olen palju joonud.", "Peeter on palju joonud."),
+            ("Ma käin psühholoogi juures.", "Jaanus käib psühholoogi juures."),
+            ("Ma olen palju joonud.", "Jaanus on palju joonud."),
             ("Mul on kõrge kolesterool.", "Peetril on kõrge kolesterool."),
             ("Mul on Mayaga intiimne suhe.",
              "Peetril on Mayaga intiimne suhe."),
@@ -448,7 +448,7 @@ class TestValistavadVormid(unittest.TestCase):
     def abi(self, tekst):
         turns = [v("user", "Ma käin psühholoogi juures."), v("user", tekst)]
         return ps.resolve_fact_scopes(
-            turns, [f(101, "Peeter käib psühholoogi juures.", 1)], "custom")
+            turns, [f(101, "Jaanus käib psühholoogi juures.", 1)], "custom")
 
     def test_38_tsitaat(self):
         r = self.abi("Ma ütlesin eile, et ära seda jaga, aga sa jagasid.")
@@ -492,8 +492,8 @@ class TestLaiUlatus(unittest.TestCase):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("user", "Ma olen palju joonud."),
                  v("user", "Kogu see tänane jutt jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter on palju joonud.", 2)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus on palju joonud.", 2)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(ulatused(r), {101: "persona", 102: "persona"})
         self.assertEqual(r["audit"]["target_mode"], "session_wide")
@@ -503,8 +503,8 @@ class TestLaiUlatus(unittest.TestCase):
         turns = [v("user", "Ma käin psühholoogi juures."),
                  v("user", "Ma olen palju joonud."),
                  v("user", "See jääb meie vahele.")]
-        facts = [f(101, "Peeter käib psühholoogi juures.", 1),
-                 f(102, "Peeter on palju joonud.", 2)]
+        facts = [f(101, "Jaanus käib psühholoogi juures.", 1),
+                 f(102, "Jaanus on palju joonud.", 2)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertNotEqual(r["audit"]["target_mode"], "session_wide")
         self.assertEqual(ulatused(r)[101], "shared")
@@ -513,7 +513,7 @@ class TestLaiUlatus(unittest.TestCase):
     def test_46_lai_ulatus_ei_vota_vigase_vooruga_fakti(self):
         turns = [v("user", "Ma olen palju joonud."),
                  v("user", "Kogu see vestlus jääb meie vahele.")]
-        facts = [f(101, "Peeter on palju joonud.", 1),
+        facts = [f(101, "Jaanus on palju joonud.", 1),
                  f(102, "Vale number.", 77)]
         r = ps.resolve_fact_scopes(turns, facts, "custom")
         self.assertEqual(ulatused(r), {101: "persona", 102: "shared"})
@@ -542,7 +542,7 @@ class TestEestiVormid(unittest.TestCase):
         for s in self.SONASTUSED:
             turns = [v("user", "Ma käin psühholoogi juures."), v("user", s)]
             r = ps.resolve_fact_scopes(
-                turns, [f(101, "Peeter käib psühholoogi juures.", 1)],
+                turns, [f(101, "Jaanus käib psühholoogi juures.", 1)],
                 "custom")
             if ulatused(r).get(101) != "persona":
                 puudu.append((s, r["audit"].get("reject_reason")
@@ -558,10 +558,10 @@ class TestNummerdatudTranskriptsioon(unittest.TestCase):
     def test_48_numbrid_algavad_uhest_ja_on_jarjest(self):
         turns = [v("user", "Tere."), v("assistant", "Tere ka."),
                  v("user", "Mul on kass.")]
-        t = ps.numbered_transcript(ps.index_turns(turns), "Peeter")
+        t = ps.numbered_transcript(ps.index_turns(turns), "Jaanus")
         self.assertEqual(t.split("\n"),
-                         ["1. Peeter: Tere.", "2. Maya: Tere ka.",
-                          "3. Peeter: Mul on kass."])
+                         ["1. Jaanus: Tere.", "2. Maya: Tere ka.",
+                          "3. Jaanus: Mul on kass."])
 
     def test_49_indeks_vastab_transkriptsioonile(self):
         turns = [v("user", "A."), v("assistant", "B."), v("user", "C.")]

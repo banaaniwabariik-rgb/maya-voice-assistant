@@ -1,7 +1,16 @@
 (function() {
     'use strict';
 
-    const MAYA_BASE_URL = 'http://100.64.0.5:8000';
+    // Aadress tuleb Androidi kihist (gradle.properties -> mayaBaseUrl).
+// Varuvariant on emulaatori "arvuti ise".
+const MAYA_BASE_URL = (function () {
+    try {
+        if (window.MAYA_CFG && window.MAYA_CFG.base) return window.MAYA_CFG.base;
+        if (window.AndroidBridge && AndroidBridge.getBaseUrls)
+            return JSON.parse(AndroidBridge.getBaseUrls()).base;
+    } catch (e) { console.warn('MAYA_BASE_URL vaikeväärtus', e); }
+    return 'http://10.0.2.2:8000';
+})();
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

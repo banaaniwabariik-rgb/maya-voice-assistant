@@ -105,7 +105,7 @@ def get_weather_overview() -> str:
         curr_wind = round(curr.get("wind_speed_10m", 0), 1)
         curr_gust = round(curr.get("wind_gusts_10m", curr_wind), 1)
 
-        txt = f"Ilm Ohtu külas praegu: {curr_temp}°C, tuul {curr_wind} m/s (puhangud kuni {curr_gust} m/s). "
+        txt = f"Ilm {config.ASUKOHT} praegu: {curr_temp}°C, tuul {curr_wind} m/s (puhangud kuni {curr_gust} m/s). "
 
         hourly = data.get("hourly", {})
         temps_12h = hourly.get("temperature_2m", [])[:12]

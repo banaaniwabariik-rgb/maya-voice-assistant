@@ -806,6 +806,7 @@
             }
             return d;
         })();
+        window.MAYA_CFG = MAYA_CFG;   // calendar_module.js loeb siit
         const SERVER_URL = MAYA_CFG.base;
                 const WATCHER_URL = MAYA_CFG.alt;
         
@@ -1868,7 +1869,7 @@
         // kuule enam vahelesegamist, langeta.
         // Kõne ALGUSE tuvastus: kui tase hüppab järsult üle hinnangulise
         // kajataseme, siis see EI OLE kaja – lase läbi, ükskõik mis lävend
-        // ütleb. Nii jääb tahtlik vahelesegamine tööle ka siis, kui Peeter
+        // ütleb. Nii jääb tahtlik vahelesegamine tööle ka siis, kui kasutaja
         // räägib vaikselt.
         let echoSilence = null;   // alles: vt mic_stalled varuvariant allpool
         let rmsTrace = [];        // ajutine mõõtevahend, vt onaudioprocess

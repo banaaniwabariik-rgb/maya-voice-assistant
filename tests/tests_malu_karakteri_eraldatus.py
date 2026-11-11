@@ -8,7 +8,7 @@ Iga test siin vastab ÜHELE auditi leiule. Need kolm viga olid tootmises korraga
         tuli uue kõrval uuesti pinnale;
   2) ei filtreerinud KARAKTERIT -> 'custom' karakteri intiimsed faktid süstiti
         ka 'asjalik'/'mentor'/'treener' prompti;
-  3) `id DESC` + LIMIT 15 tähendas, et ALUSFAKTID ("Kasutaja nimi on Peeter")
+  3) `id DESC` + LIMIT 15 tähendas, et ALUSFAKTID ("Kasutaja nimi on Jaan")
         jäid akna taha ja mudel ei näinud neid kunagi.
 
 KÄIVITAMINE: python3 tests_malu_karakteri_eraldatus.py
@@ -29,7 +29,7 @@ import sys
 import tempfile
 import unittest
 
-# Lokaalselt on kood BASE/server/ all, serveris ~/voice-agent/ juures
+# Lokaalselt on kood BASE/server/ all, serveris ~/maya/ juures
 # lamedalt. Varem oli "server" siin kõvasti sees ja testid KUKKUSID serveris
 # läbi failitee pärast – mitte sisulise vea pärast. KOOD_KAUST lahendab
 # mõlema paigutuse; ükski kontroll ei muutu.
@@ -96,7 +96,7 @@ class TestSkeem(unittest.TestCase):
 class TestNähtavus(unittest.TestCase):
 
     def valmista(self, conn):
-        memory_fts.upsert_fact(conn, "Kasutaja nimi on Peeter.", category="muu",
+        memory_fts.upsert_fact(conn, "Kasutaja nimi on Jaan.", category="muu",
                                confidence=0.9, persona=None, scope="shared")
         memory_fts.upsert_fact(conn, "Peetrile meeldib ansambel Pohjatuul.",
                                category="eelistus", confidence=0.6,
@@ -104,7 +104,7 @@ class TestNähtavus(unittest.TestCase):
         memory_fts.upsert_fact(conn, "Peetril on Mayaga eriline lähedus.",
                                category="suhe", confidence=0.8,
                                persona="custom", scope="persona")
-        memory_fts.upsert_fact(conn, "Peeter hoiab seda enda teada.",
+        memory_fts.upsert_fact(conn, "Jaan hoiab seda enda teada.",
                                category="identiteet", confidence=0.5,
                                persona="custom", scope="private")
 
@@ -114,10 +114,10 @@ class TestNähtavus(unittest.TestCase):
         try:
             self.valmista(conn)
             faktid = memory_fts.facts_for_prompt(conn, persona="asjalik")
-            self.assertIn("Kasutaja nimi on Peeter.", faktid)
+            self.assertIn("Kasutaja nimi on Jaan.", faktid)
             self.assertNotIn("Peetril on Mayaga eriline lähedus.", faktid)
             self.assertNotIn("Peetrile meeldib ansambel Pohjatuul.", faktid)
-            self.assertNotIn("Peeter hoiab seda enda teada.", faktid)
+            self.assertNotIn("Jaan hoiab seda enda teada.", faktid)
         finally:
             conn.close(); os.unlink(path)
 
@@ -127,7 +127,7 @@ class TestNähtavus(unittest.TestCase):
             self.valmista(conn)
             faktid = memory_fts.facts_for_prompt(conn, persona="custom")
             self.assertIn("Peetril on Mayaga eriline lähedus.", faktid)
-            self.assertIn("Kasutaja nimi on Peeter.", faktid)
+            self.assertIn("Kasutaja nimi on Jaan.", faktid)
             self.assertNotIn("Peetrile meeldib ansambel Pohjatuul.", faktid)
         finally:
             conn.close(); os.unlink(path)
@@ -138,7 +138,7 @@ class TestNähtavus(unittest.TestCase):
         try:
             self.valmista(conn)
             for p in ("custom", "asjalik", "singer", ""):
-                self.assertNotIn("Peeter hoiab seda enda teada.",
+                self.assertNotIn("Jaan hoiab seda enda teada.",
                                  memory_fts.facts_for_prompt(conn, persona=p),
                                  f"private leke karakterile '{p}'")
         finally:
@@ -150,7 +150,7 @@ class TestNähtavus(unittest.TestCase):
         try:
             self.valmista(conn)
             faktid = memory_fts.facts_for_prompt(conn, persona="")
-            self.assertEqual(faktid, ["Kasutaja nimi on Peeter."])
+            self.assertEqual(faktid, ["Kasutaja nimi on Jaan."])
         finally:
             conn.close(); os.unlink(path)
 
@@ -178,18 +178,18 @@ class TestOlekufilter(unittest.TestCase):
         try:
             conn.execute(
                 "INSERT INTO memory (timestamp, fact, status, scope, confidence) "
-                "VALUES ('2026-11-08', 'Peeter käib kolm korda nädalas ujumas.', "
+                "VALUES ('2026-11-08', 'Jaan käib kolm korda nädalas ujumas.', "
                 "'superseded', 'shared', 0.9)"
             )
             conn.execute(
                 "INSERT INTO memory (timestamp, fact, status, scope, confidence) "
-                "VALUES ('2026-11-08', 'Peeter ei käi enam ujumas.', "
+                "VALUES ('2026-11-08', 'Jaan ei käi enam ujumas.', "
                 "'active', 'shared', 0.95)"
             )
             conn.commit()
             faktid = memory_fts.facts_for_prompt(conn, persona="asjalik")
-            self.assertIn("Peeter ei käi enam ujumas.", faktid)
-            self.assertNotIn("Peeter käib kolm korda nädalas ujumas.", faktid)
+            self.assertIn("Jaan ei käi enam ujumas.", faktid)
+            self.assertNotIn("Jaan käib kolm korda nädalas ujumas.", faktid)
         finally:
             conn.close(); os.unlink(path)
 
@@ -247,10 +247,10 @@ class TestElutsyklEraldatus(unittest.TestCase):
         """Eraldatus EI TOHI elutsüklit katki teha omaniku sees."""
         conn, path = uus_baas()
         try:
-            r1 = memory_fts.upsert_fact(conn, "Peeter eelistab aeglast tempot.",
+            r1 = memory_fts.upsert_fact(conn, "Jaan eelistab aeglast tempot.",
                                         category="eelistus", confidence=0.6,
                                         persona="singer", scope="persona")
-            r2 = memory_fts.upsert_fact(conn, "Peeter eelistab kiiret tempot.",
+            r2 = memory_fts.upsert_fact(conn, "Jaan eelistab kiiret tempot.",
                                         category="eelistus", confidence=0.8,
                                         persona="singer", scope="persona")
             self.assertIn(r2["action"], ("supersede", "conflict"))
@@ -268,7 +268,7 @@ class TestJarjestus(unittest.TestCase):
         Kindluse järgi järjestades on nimi mudelile nähtav ka 40 fakti juures."""
         conn, path = uus_baas()
         try:
-            memory_fts.upsert_fact(conn, "Kasutaja nimi on Peeter.",
+            memory_fts.upsert_fact(conn, "Kasutaja nimi on Jaan.",
                                    category="muu", confidence=1.0)
             # Täitefaktid peavad olema LEKSIKAALSELT ERINEVAD. Kui kasutada
             # "pisiasi number 0/1/2...", loeb normaliseerija need duplikaatideks
@@ -287,8 +287,8 @@ class TestJarjestus(unittest.TestCase):
                 memory_fts.upsert_fact(conn, f"Peetri toas on {s}.",
                                        category="muu", confidence=0.2)
             faktid = memory_fts.facts_for_prompt(conn, persona="asjalik")
-            self.assertIn("Kasutaja nimi on Peeter.", faktid)
-            self.assertEqual(faktid[0], "Kasutaja nimi on Peeter.")
+            self.assertIn("Kasutaja nimi on Jaan.", faktid)
+            self.assertEqual(faktid[0], "Kasutaja nimi on Jaan.")
         finally:
             conn.close(); os.unlink(path)
 
@@ -340,10 +340,10 @@ class TestOtsing(unittest.TestCase):
         ise küsib (recall_memory), siis omanik tohib selle leida."""
         conn, path = uus_baas()
         try:
-            memory_fts.upsert_fact(conn, "Peeter usaldas mulle salajase mõtte.",
+            memory_fts.upsert_fact(conn, "Jaan usaldas mulle salajase mõtte.",
                                    category="identiteet", confidence=0.6,
                                    persona="custom", scope="private")
-            self.assertNotIn("Peeter usaldas mulle salajase mõtte.",
+            self.assertNotIn("Jaan usaldas mulle salajase mõtte.",
                              memory_fts.facts_for_prompt(conn, persona="custom"))
             leitud = memory_fts.search_facts(conn, "salajase mõtte",
                                              persona="custom", include_private=True)
@@ -455,30 +455,30 @@ class TestKasutajaNimi(unittest.TestCase):
         self.assertEqual(self.up.get_name(self.db), VAIKENIMI)
 
     def test_nime_muutmine_ja_lugemine(self):
-        r = self.up.set_name("Peeter", self.db)
+        r = self.up.set_name("Jaanus", self.db)
         self.assertTrue(r["ok"])
         self.assertEqual(r["old"], VAIKENIMI)
-        self.assertEqual(r["new"], "Peeter")
-        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Peeter")
+        self.assertEqual(r["new"], "Jaanus")
+        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Jaanus")
 
     def test_lause_ei_lahe_nimeks(self):
         """Valesti kuuldud lause ei tohi iga karakteri prompti sattuda."""
-        for halb in ("jäta meelde et minu nimi on Peeter", "", "   ",
+        for halb in ("jäta meelde et minu nimi on Jaanus", "", "   ",
                      "Peeter123", "a" * 80, "nimi!"):
             r = self.up.set_name(halb, self.db)
             self.assertFalse(r["ok"], f"lubas nimeks: {halb!r}")
         self.assertEqual(self.up.get_name(self.db, use_cache=False), VAIKENIMI)
 
     def test_usutavad_nimed_labivad(self):
-        for hea in ("Peeter", "Mari-Liis", "Anne Mari", "O'Brien"):
+        for hea in ("Jaanus", "Mari-Liis", "Anne Mari", "O'Brien"):
             self.up.invalidate_cache()
             r = self.up.set_name(hea, self.db)
             self.assertTrue(r["ok"], f"keelas nime: {hea!r}")
 
     def test_kohahoidja_asendatakse(self):
-        self.up.set_name("Peeter", self.db)
+        self.up.set_name("Jaanus", self.db)
         t = self.up.fill("Sinu vestluspartner on {USER}.", self.db)
-        self.assertEqual(t, "Sinu vestluspartner on Peeter.")
+        self.assertEqual(t, "Sinu vestluspartner on Jaanus.")
 
     def test_tekst_ilma_kohahoidjat_jaab_samaks(self):
         self.assertEqual(self.up.fill("Tere.", self.db), "Tere.")
@@ -500,14 +500,14 @@ class TestKasutajaNimi(unittest.TestCase):
         asendada (mõõdetud: 1 sõnastus 4-st)."""
         conn, path = uus_baas()
         try:
-            memory_fts.upsert_fact(conn, "Kasutaja nimi on Peeter.",
+            memory_fts.upsert_fact(conn, "Kasutaja nimi on Jaan.",
                                    category="muu", confidence=0.6)
-            n = memory_fts.retire_name_facts(conn, (VAIKENIMI, "Peeter"))
+            n = memory_fts.retire_name_facts(conn, (VAIKENIMI, "Jaanus"))
             self.assertEqual(n, 1)
-            self.assertNotIn("Kasutaja nimi on Peeter.",
+            self.assertNotIn("Kasutaja nimi on Jaan.",
                              memory_fts.facts_for_prompt(conn, persona="asjalik"))
             olek = conn.execute(
-                "SELECT status FROM memory WHERE fact='Kasutaja nimi on Peeter.'"
+                "SELECT status FROM memory WHERE fact='Kasutaja nimi on Jaan.'"
             ).fetchone()[0]
             self.assertEqual(olek, "retired", "fakt kustutati, mitte pensionile")
         finally:
@@ -518,7 +518,7 @@ class TestKasutajaNimi(unittest.TestCase):
         try:
             memory_fts.upsert_fact(conn, "Peetril on sõber, kelle nimi on Tiit.",
                                    category="suhe", confidence=0.8)
-            memory_fts.retire_name_facts(conn, (VAIKENIMI, "Peeter"))
+            memory_fts.retire_name_facts(conn, (VAIKENIMI, "Jaanus"))
             self.assertIn("Peetril on sõber, kelle nimi on Tiit.",
                           memory_fts.facts_for_prompt(conn, persona="asjalik"))
         finally:
@@ -526,7 +526,7 @@ class TestKasutajaNimi(unittest.TestCase):
 
     def test_kaal_ja_pikkus_on_tavalised_faktid(self):
         """Neid ta tahab salvestada – need EI tohi nimefiltrisse langeda."""
-        for f in ("Peeter kaalub 82 kilo.", "Peetri pikkus on 180 sentimeetrit."):
+        for f in ("Jaan kaalub 82 kilo.", "Peetri pikkus on 180 sentimeetrit."):
             self.assertFalse(memory_fts.is_name_fact(f, VAIKENIMI), f)
 
     def test_susteemipromptis_on_nimereegel(self):
@@ -567,42 +567,42 @@ class TestKasutajaNimi(unittest.TestCase):
     def test_mudel_ei_saa_nime_tagasi_muuta(self):
         """MÕÕDETUD VIGA 09.11.2026: kasutaja ütles uue nime, tööriist
         salvestas, ja 25 s hiljem kutsus MUDEL ISE tööriista vana nimega
-        tagasi ('Sinu nimi ongi Peeter, kallis'). Mudeli veendumus ei tohi
+        tagasi ('Sinu nimi ongi Jaan, kallis'). Mudeli veendumus ei tohi
         kasutaja öeldut üle kirjutada."""
-        r1 = self.up.set_name("Peeter", self.db)
+        r1 = self.up.set_name("Jaanus", self.db)
         self.assertTrue(r1["ok"])
         # mudel üritab tagasi
         r2 = self.up.set_name(VAIKENIMI, self.db)
         self.assertFalse(r2["ok"], "lubas nime tagasi muuta")
-        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Peeter")
-        self.assertIn("Peeter", r2["teade"])
+        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Jaanus")
+        self.assertIn("Jaanus", r2["teade"])
 
     def test_vahesammuga_ei_saa_vanale_nimele_tagasi(self):
         """SEE OLI MINU ESIMESE PARANDUSE AUK. Kaitse vaatas ainult
         VAHETUT eelmist nime, nii et mudel pääses vanale nimele tagasi
-        ühe vahesammu kaudu: Peeter -> Peeter -> Ai Peeter -> Peeter."""
-        self.up.set_name("Peeter", self.db)      # Peeter -> Peeter
-        self.up.set_name("Ai Peeter", self.db)     # Peeter -> Ai Peeter
+        ühe vahesammu kaudu: Jaan -> Jaanus -> Ai Jaan -> Jaan."""
+        self.up.set_name("Jaanus", self.db)      # Jaan -> Jaanus
+        self.up.set_name("Ai Jaan", self.db)     # Jaanus -> Ai Jaan
         r = self.up.set_name(VAIKENIMI, self.db)    # mudel üritab algusesse
         self.assertFalse(r["ok"], "pääses vahesammuga vanale nimele tagasi")
-        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Ai Peeter")
+        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Ai Jaan")
 
     def test_haldur_saab_kaitsest_moodas_parandada(self):
-        """Kõnetuvastus võib nime valesti kuulda ('Ai Peeter' vs 'Peeter').
+        """Kõnetuvastus võib nime valesti kuulda ('Ai Jaan' vs 'Jaanus').
         Inimene peab saama selle ära parandada ka siis, kui kaitse muidu
         ees seisaks."""
-        self.up.set_name("Peeter", self.db)
-        self.up.set_name("Ai Peeter", self.db)
-        r = self.up.force_name("Peeter", self.db)
+        self.up.set_name("Jaanus", self.db)
+        self.up.set_name("Ai Jaan", self.db)
+        r = self.up.force_name("Jaanus", self.db)
         self.assertTrue(r["ok"], r.get("teade"))
-        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Peeter")
+        self.assertEqual(self.up.get_name(self.db, use_cache=False), "Jaanus")
 
     def test_nimi_loetakse_alati_baasist(self):
         """Vahemälu tekitas päris probleemi: väljaspool protsessi muudetud
         nimi ei jõudnud jooksvasse Maya protsessi enne taaskäivitust."""
         import sqlite3
-        self.up.set_name("Peeter", self.db)
-        self.assertEqual(self.up.get_name(self.db), "Peeter")
+        self.up.set_name("Jaanus", self.db)
+        self.assertEqual(self.up.get_name(self.db), "Jaanus")
         # muudame OTSE baasis, nagu teeks teine protsess
         c = sqlite3.connect(self.db)
         c.execute("UPDATE settings SET value='Mart' WHERE key='user_name'")
@@ -619,14 +619,14 @@ class TestKasutajaNimi(unittest.TestCase):
 
     def test_kasutaja_saab_kolmanda_nime_ikka_panna(self):
         """Kaitse ei tohi kasutajat lukustada – kolmas nimi peab minema."""
-        self.up.set_name("Peeter", self.db)
+        self.up.set_name("Jaanus", self.db)
         r = self.up.set_name("Mart", self.db)
         self.assertTrue(r["ok"], "kaitse blokeeris päris muudatuse")
         self.assertEqual(self.up.get_name(self.db, use_cache=False), "Mart")
 
     def test_sama_nime_uuesti_panemine_on_ok(self):
-        self.up.set_name("Peeter", self.db)
-        r = self.up.set_name("Peeter", self.db)
+        self.up.set_name("Jaanus", self.db)
+        r = self.up.set_name("Jaanus", self.db)
         self.assertTrue(r["ok"])
 
     def test_promptis_on_keeld_nime_ise_muuta(self):

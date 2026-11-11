@@ -4,7 +4,7 @@ MIKS SEE FAIL OLEMAS ON
 -----------------------
 Algses erainstallatsioonis olid teed, andmebaasid ja .env-i asukoht
 kõvakodeeritud ühe konkreetse serveri ja kasutaja külge
-(nt ``/home/<kasutaja>/voice-agent/reminders.db``). See tegi projekti
+(nt ``/home/<kasutaja>/<projekt>/reminders.db``). See tegi projekti
 teisele inimesele paigaldamatuks.
 
 Siin on kõik need väärtused koondatud ja loetakse keskkonnamuutujatest.
@@ -144,6 +144,19 @@ AVALIK_URL = env("MAYA_PUBLIC_URL", f"http://127.0.0.1:{PORT}")
 KASUTAJA_NIMI = env("MAYA_USER_NAME", "Kasutaja")
 AJAVOOND = env("MAYA_TIMEZONE", "Europe/Tallinn")
 
+# ASUKOHT ilmainfo ja kohaliku konteksti jaoks.
+# AVALIKU VERSIOONI PARANDUS: originaalpaigalduses olid omaniku
+# kodukoha nimi ja koordinaadid KÕVAKODEERITUD viide moodulisse.
+# Need on isikuandmed ja nüüd tulevad keskkonnast. Vaikeväärtus on
+# Tallinna kesklinn – neutraalne avalik punkt.
+ASUKOHT = env("MAYA_LOCATION", "Tallinn")
+ASUKOHT_LAT = float(env("MAYA_LAT", "59.437"))
+ASUKOHT_LON = float(env("MAYA_LON", "24.754"))
+
+# Mis kell kasutaja magab – Maya ei helista sel ajal ise.
+UNEAEG_ALGUS = int(env("MAYA_SLEEP_START_HOUR", "23"))
+UNEAEG_LOPP = int(env("MAYA_SLEEP_END_HOUR", "8"))
+
 # =====================================================================
 # VALIKULISED VÄLISED TEENUSED
 # =====================================================================
@@ -181,6 +194,8 @@ def kokkuvote() -> str:
         f"  host:port       : {HOST}:{PORT}",
         f"  avalik URL      : {AVALIK_URL}",
         f"  kasutaja nimi   : {KASUTAJA_NIMI}",
+        f"  asukoht         : {ASUKOHT} ({ASUKOHT_LAT}, {ASUKOHT_LON})",
+        f"  uneaeg          : {UNEAEG_ALGUS}:00-{UNEAEG_LOPP}:00",
         f"  ajavöönd        : {AJAVOOND}",
         f"  GEMINI_API_KEY  : {on(GEMINI_API_KEY)}",
         f"  GROQ_API_KEY    : {on(GROQ_API_KEY)}",

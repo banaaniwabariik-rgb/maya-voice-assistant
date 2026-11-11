@@ -112,7 +112,12 @@ def get_recent_tech_logs(limit: int = 25) -> list:
 # ==========================================
 # 3. TÄPPISILM (OPEN-METEO: OHTU KÜLA / KEILA)
 # ==========================================
-def get_detailed_weather(location_name="Ohtu külas", lat=59.437, lon=24.754) -> dict:
+def get_detailed_weather(location_name=None, lat=None, lon=None) -> dict:
+    # Vaikeväärtused tulevad seadistusest (MAYA_LOCATION / MAYA_LAT /
+    # MAYA_LON), mitte ühe konkreetse inimese kodukohast.
+    location_name = location_name or config.ASUKOHT
+    lat = config.ASUKOHT_LAT if lat is None else lat
+    lon = config.ASUKOHT_LON if lon is None else lon
     url = (
         f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
         "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code"

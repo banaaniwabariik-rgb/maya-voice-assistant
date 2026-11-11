@@ -56,7 +56,7 @@ def t2():
     # vana skeem, nagu tootmises enne Faas D
     conn.execute("CREATE TABLE memory (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                  "timestamp TEXT NOT NULL, fact TEXT NOT NULL UNIQUE)")
-    for i, f in enumerate(["Peeter elab Eestis", "Peetril on koer", "Peeter joob teed"], 1):
+    for i, f in enumerate(["Jaan elab Eestis", "Peetril on koer", "Jaan joob teed"], 1):
         conn.execute("INSERT INTO memory (timestamp, fact) VALUES (?,?)",
                      (f"2026-0{i}-01 10:00", f))
     conn.commit()
@@ -196,8 +196,8 @@ def t12():
 @test("13. eitus tuvastatakse VASTUOLUNA, mitte uuendusena")
 def t13():
     conn = fresh()
-    a = M.upsert_fact(conn, "Peeter joob kohvi hommikuti", category="harjumus")
-    b = M.upsert_fact(conn, "Peeter ei joo enam kohvi hommikuti", category="harjumus")
+    a = M.upsert_fact(conn, "Jaan joob kohvi hommikuti", category="harjumus")
+    b = M.upsert_fact(conn, "Jaan ei joo enam kohvi hommikuti", category="harjumus")
     assert b["action"] == "conflict", b
     st = conn.execute("SELECT status FROM memory WHERE id=?", (a["id"],)).fetchone()[0]
     assert st == "conflicted", st
@@ -209,7 +209,7 @@ def t13():
 def t14():
     conn = fresh()
     M.upsert_fact(conn, "Peetril on valge Volvo", category="omand")
-    M.upsert_fact(conn, "Peeter jookseb kolm korda nädalas", category="harjumus")
+    M.upsert_fact(conn, "Jaan jookseb kolm korda nädalas", category="harjumus")
     M.upsert_fact(conn, "Peetri õde elab Tallinnas", category="suhe")
     assert M.active_fact_count(conn) == 3, "eri teemad asendasid teineteist"
 
@@ -238,8 +238,8 @@ def t16():
 @test("17. kindlus mõjutab faktide järjestust")
 def t17():
     conn = fresh()
-    M.upsert_fact(conn, "Peeter mainis kord Volvot", category="omand", confidence=0.3)
-    M.upsert_fact(conn, "Peeter kinnitas et sõidab Volvoga", category="muu", confidence=1.0)
+    M.upsert_fact(conn, "Jaan mainis kord Volvot", category="omand", confidence=0.3)
+    M.upsert_fact(conn, "Jaan kinnitas et sõidab Volvoga", category="muu", confidence=1.0)
     got = M.search_facts(conn, "Volvo")
     assert len(got) == 2, got
     assert got[0]["confidence"] == 1.0, f"madala kindlusega fakt esimene: {got}"
@@ -248,7 +248,7 @@ def t17():
 @test("18. kategooriad ja allikas salvestuvad")
 def t18():
     conn = fresh()
-    r = M.upsert_fact(conn, "Peeter ehitab kuuri", category="projekt",
+    r = M.upsert_fact(conn, "Jaan ehitab kuuri", category="projekt",
                       confidence=0.9, source="kone_2026_11_07")
     row = conn.execute("SELECT category, confidence, source, status FROM memory WHERE id=?",
                        (r["id"],)).fetchone()

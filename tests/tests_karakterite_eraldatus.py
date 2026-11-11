@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Karakterite eraldatus ja hääletoonid.
 
-Taust: 2026-11-07 teatas Peeter, et kõigil karakteritel on tekkinud ühine
+Taust: 2026-11-07 teatas Jaan, et kõigil karakteritel on tekkinud ühine
 iseloom. Tootmislogi kinnitas: tema KOHANDATUD juhis liideti iga karakteri
 prompti lõppu (asjalik 702 -> 1087, filosoof 902 -> 1287, zen 1147 -> 1532).
 

@@ -1075,15 +1075,15 @@ async def chat_endpoint(file: UploadFile = File(None), image: UploadFile = File(
     weather_triggers = ["ilm", "temperatuur", "kraad", "kraadi", "sajab", "vihm", "tuul", "soe", "külm", "ohtu", "ohtus"]
     if any(trig in user_lower for trig in weather_triggers):
         try:
-            print("--> [WEATHER_TOOL]: Päring ilmainfo kohta Ohtus...", flush=True)
-            w_data = features_pack.get_detailed_weather(location_name="Ohtu külas")
+            print(f"--> [WEATHER_TOOL]: Päring ilmainfo kohta: {config.ASUKOHT}", flush=True)
+            w_data = features_pack.get_detailed_weather()
             if isinstance(w_data, dict):
                 temp = w_data.get("current_temp", "?")
                 wind = w_data.get("current_wind", "?")
                 gust = w_data.get("max_gust", "?")
                 min_t = w_data.get("min_temp_12h", "?")
                 rain_str = "sajab või hakkab peagi sadama" if w_data.get("rain_upcoming") else "kuiv, sademeid ei paista"
-                loc = w_data.get("location", "Ohtu külas")
+                loc = w_data.get("location", config.ASUKOHT)
                 weather_info_prompt = f"""
 ILMATEATE REAALAJAS ANDMED ({loc}):
 - Praegune temperatuur: {temp}°C
@@ -1168,11 +1168,12 @@ KALENDRI VASTAMISE REEGLID:
         f"Sa oled Maya.\n"
         f"Hetke aeg: {current_time_str} ({current_weekday}).\n"
         f"KASUTAJA TAUST (RANGELT PASSIIVNE TEADMINE):\n"
-        f"- Kodukoht: Harjumaa, Ohtu küla.\n"
+        f"- Kodukoht: {config.ASUKOHT}.\n"
         f"KATEGOORILINE KEELD JA REEGEL:\n"
-        f"ÄRA KUNAGI maini kasutaja elukohta (Ohtu küla), autonumbrit (220 PHX) ega muid mälufakte omal algatusel! "
+        f"ÄRA KUNAGI maini kasutaja elukohta, sõiduki andmeid ega muid "
+        f"mälufakte omal algatusel! "
         f"Käitu nagu normaalne inimene: räägi AINULT sellest, mida kasutaja parasjagu küsis. "
-        f"Asukohta või auto andmeid tohid kasutada AINULT siis, kui kasutaja esitab nende kohta OTSESE küsimuse (nt \"mis ilm mul siin on?\" või \"mis mu autonumber on?\"). Muul ajal on nende mainimine rangelt keelatud.\n\n"
+        f"Asukohta või sõiduki andmeid tohid kasutada AINULT siis, kui kasutaja esitab nende kohta OTSESE küsimuse (nt \"mis ilm mul siin on?\" või \"mis mu autonumber on?\"). Muul ajal on nende mainimine rangelt keelatud.\n\n"
         f"AKTIIVNE ROLL JA SUHTLEMISSTIIL:\n"
         f"{persona_style}\n\n"
         "ÜLDISED REEGLID:\n"

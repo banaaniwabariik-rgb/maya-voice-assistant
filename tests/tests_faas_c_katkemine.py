@@ -304,7 +304,7 @@ def t13():
     assert m, "eelpuhvrit ei seata"
     v = int(m.group(1))
     assert 150 <= v <= 300, f"eelpuhver {v} ms on väljaspool mõõdetud töövahemikku"
-    # Vooru LÕPU seaded jäävad: Peeter võib lause keskel pausi teha.
+    # Vooru LÕPU seaded jäävad: Jaan võib lause keskel pausi teha.
     assert "END_SENSITIVITY_LOW" in WS, "lõputundlikkus pole madal"
     assert "silence_duration_ms=800" in WS, "vaikusenõue on muutunud"
     assert "START_OF_ACTIVITY_INTERRUPTS" in WS, "vahelesegamine on keelatud"

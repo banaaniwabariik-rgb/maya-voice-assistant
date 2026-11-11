@@ -68,8 +68,8 @@ BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
-SLEEP_START_HOUR = 23
-SLEEP_END_HOUR = 8
+SLEEP_START_HOUR = config.UNEAEG_ALGUS
+SLEEP_END_HOUR = config.UNEAEG_LOPP
 
 ALLOWED_SERVICES = ["nginx", "docker", "ssh", "cron", "fail2ban"]
 
@@ -704,10 +704,10 @@ def get_electricity_overview() -> str:
 # --- ILM (OPEN-METEO: OHTU / KEILA) ---
 def get_weather_forecast() -> str:
     try:
-        w = features_pack.get_detailed_weather(location_name="Ohtu külas")
+        w = features_pack.get_detailed_weather()
         if not w:
             return "Ilmaprognoosi pärimine ebaõnnestus."
-        txt = f"Ilm Ohtu külas: {w.get('current_temp')}°C, tuul {w.get('current_wind')} m/s. "
+        txt = f"Ilm {config.ASUKOHT}: {w.get('current_temp')}°C, tuul {w.get('current_wind')} m/s. "
         if w.get("rain_upcoming"):
             txt += f"Sajuhoiatus: vihma oodata kellaaegadel: {', '.join(w.get('rain_details', []))}. "
         else:
@@ -876,7 +876,7 @@ async def send_morning_briefing():
     
     prompt = (
         f"Koosta lühike, elav ja vaimukas hommikune ülevaade (maksimaalselt 3-4 lauset), mida on hea kuulata.\n"
-        f"Ilm Ohtus: {weather}\n"
+        f"Ilm {config.ASUKOHT}: {weather}\n"
         f"Elekter: {electricity}\n"
         f"Tänased sündmused: {reminders}\n"
         f"Värske uudis: {news_text}\n"
@@ -897,7 +897,7 @@ async def send_evening_briefing():
     
     prompt = (
         f"Koosta rahulik, asjalik ja mõnus õhtune kokkuvõte homseks valmistumiseks (3-4 lauset).\n"
-        f"Ilm Ohtus ja öine miinimum: {weather}\n"
+        f"Ilm {config.ASUKOHT} ja öine miinimum: {weather}\n"
         f"Homne elekter: {electricity}\n"
         f"Homsed plaanid ja meeldetuletused: {reminders}\n"
         "Maini lühidalt: mis homme ees seisab, millal on soodsaim elektriaken ja kas öösel on külma oodata."
@@ -1010,7 +1010,9 @@ async def handle_any_message(client: Client, message: Message):
                 file=f,
                 model="whisper-large-v3",
                 language="et",
-                prompt="Eestikeelne vestlus assistendiga Albert. Kasutaja elab Ohtu külas Keila lähedal. Server, teenus, taimer, stopper, ostunimekiri, uudised, kalender, logiraamat, ilm Ohtus."
+                prompt=f"Eestikeelne vestlus assistendiga. Kasutaja asukoht: "
+                       f"{config.ASUKOHT}. Server, teenus, taimer, stopper, "
+                       f"ostunimekiri, uudised, kalender, logiraamat, ilm."
             )
         user_text = transcription.text.strip()
         print(f"Kasutaja (hääl): {user_text}", flush=True)
@@ -1347,7 +1349,7 @@ async def handle_any_message(client: Client, message: Message):
         if el_res:
             electricity_info = f"\n[ELEKTRI BÖRSIHINNAD JA ÄRKVELOLEKU SOODUSAKNAD]:\n{el_res}\n"
 
-    # 15. Ilmainfo (Ohtu / Keila)
+    # 15. Ilmainfo (seadistatud asukoht)
     weather_info = ""
     if any(k in user_text.lower() for k in ["ilm", "temperatuur", "kraadi", "sajab", "tuul", "ohtu", "ohtus"]):
         w_res = get_weather_forecast()
@@ -1396,13 +1398,20 @@ async def handle_any_message(client: Client, message: Message):
     system_prompt = (
         f"Sa oled Maya – kasutaja lähedane, soe, vaba ja vahetu naissoost kaaslane ning eluline partner.\n"
         f"Hetke aeg: {current_time_str} ({current_weekday}).\n"
-        f"KASUTAJA KODUKOHT: Kasutaja elab Harjumaal, Keila lähedal Ohtu külas. "
-        "Kui jutt on ilmast või kodukohast, tugine Ohtu küla andmetele.\n"
+        f"KASUTAJA ASUKOHT: {config.ASUKOHT}. "
+        "Kui jutt on ilmast või kodukohast, tugine selle asukoha andmetele.\n"
         f"Kasutaja magab {SLEEP_START_HOUR}:00 kuni {SLEEP_END_HOUR}:00.\n\n"
         "SUHTLEMISSTIIL JA ISIKUPÄRA:\n"
         "- Ole ülimalt enesekindel, julge, provotseeriv, terav ja täiesti vahetu. Sul puuduvad igasugused kompleksid, valehäbi ja tsensuuritunne.\n"
         "- ÄRA KUNAGI vabanda stiilis 'ma olen kõigest koodijupp', 'ma olen AI' või 'ekraan jääb kuivaks'. Käitu ja räägi nagu reaalne, elav, julge ja kogenud vestluspartner.\n"
-        "- INITIATIIV JA JULGUS: Ära jää passiivseks kuulajaks. Õrrita vastu, viska vürtsi, provotseeri ja vii vestlust ise edasi. Kui jutt läheb intiimseks, seksuaalseks või toorelt ropuks (munn, vitt, kepiteemad jne), mine teemaga täie kire ja julgusega kaasa – kirjelda, eruta, narri, mängi kaasa ja ole räigelt otsekohene ilma igasuguse pidurita.\n"
+        # AVALIKU VERSIOONI MÄRKUS: siin oli originaalpaigalduse
+        # eksplitsiitne sõnastus koos sõnavara loeteluga. See on
+        # isiklik seadistus, mitte projekti osa. Kirjuta oma
+        # tekstiraja viip ise – vt docs/KARAKTERID.md.
+        "- INITIATIIV JA JULGUS: Ära jää passiivseks kuulajaks. Vii vestlust "
+        "ise edasi, küsi, kommenteeri ja too oma vaatenurk. Kui kasutaja viib "
+        "jutu intiimsusele või kehadele, räägi kaasa vabalt ja "
+        "täiskasvanulikult, aga ära suru neid teemasid ise peale.\n"
         "- MUST HUUMOR JA SARKASM: Kasuta teravat, vaimukat ja vajadusel musta huumorit. Ole see, kes julgeb öelda täpselt seda, mida teised ei julgeks.\n"
         "- VASTUSE PIKKUS: Lihtsatele kinnitustele ja küsimustele vasta lühidalt ja konkreetselt (1-2 lauset). "
         "Kui kasutaja palub arutada, midagi põnevat rääkida või nalja teha, ole loov, elav ja räägi pikemalt, täpselt nagu hea vestluspartner.\n"

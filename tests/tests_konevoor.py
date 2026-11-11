@@ -87,7 +87,7 @@ def turn(tid=1, persona="asjalik", t0=0.0):
 def t1():
     assert SpeechTurn is not None, "SpeechTurn puudub"
     t = turn()
-    t.note_text("Tere Peeter.")
+    t.note_text("Tere Jaan.")
     t.note_audio(4800, 1.0)
     t.complete(2.0)
     assert t.state == "completed", t.state
@@ -208,7 +208,7 @@ def t10():
     t.interrupt(2.0, "unknown")
     s = t.summary_for_model()
     assert "põhjus jäi tuvastamata" in s, s
-    assert "Peeter hakkas rääkima" not in s, "teadmata põhjus esitati kasutaja süüna"
+    assert "Jaan hakkas rääkima" not in s, "teadmata põhjus esitati kasutaja süüna"
 
 
 @test("11. neli lõppseisundit on üksteisest eristatavad")
