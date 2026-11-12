@@ -191,7 +191,7 @@ def t8():
 @test("15. mikrofoni kaadrit EI muudeta kunagi (kajavärav eemaldatud)")
 def t15():
     """Kajavärav oli RMS-lävendil põhinev ja mõõtmine lükkas selle ümber:
-    Peetri päris kõnes oli kaja 95. protsentiil 0,0092 ja kõne mediaan 0,0139 –
+    Mõõdetud päris kõnes oli kaja 95. protsentiil 0,0092 ja kõne mediaan 0,0139 –
     jaotused kattuvad, eraldavat lävendit pole olemas. Värav sõi ~10 s kõnest
     ja Gemini ei saanud 46 s jooksul ühtegi sõna. Nüüd läheb iga kaader
     muutmata kujul edasi."""

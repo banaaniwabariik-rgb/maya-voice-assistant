@@ -92,12 +92,21 @@ def get_electricity_overview() -> str:
 def get_weather_overview() -> str:
     try:
         import urllib.request, json
+        # ASUKOHT TULEB SEADISTUSEST, MITTE KOODIST.
+        # Originaalpaigalduses olid siin omaniku kodu koordinaadid
+        # kõvakodeeritud. Need on isikuandmed, mis avalikku koopiasse ei
+        # kuulu. Nüüd loetakse need `MAYA_LAT` / `MAYA_LON`
+        # keskkonnamuutujatest (vaikimisi Tallinna kesklinn) ja ajavöönd
+        # `MAYA_TIMEZONE`-ist – vt server/config.py.
+        from urllib.parse import quote
         url = (
-            "https://api.open-meteo.com/v1/forecast?latitude=59.437&longitude=24.754"
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={config.ASUKOHT_LAT}&longitude={config.ASUKOHT_LON}"
             "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_gusts_10m"
             "&hourly=temperature_2m,precipitation_probability,precipitation,wind_speed_10m"
             "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max"
-            "&wind_speed_unit=ms&timezone=Europe%2FTallinn&forecast_days=7"
+            "&wind_speed_unit=ms"
+            f"&timezone={quote(config.AJAVOOND, safe='')}&forecast_days=7"
         )
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (MayaVoiceAgent)"})
         with urllib.request.urlopen(req, timeout=6) as resp:

@@ -38,9 +38,13 @@ def test(name):
     return deco
 
 
-# Peetri päris juhis logist (lühendatud) – just see levis kõigile karakteritele.
-NAIDIS_JUHIS = ("Sa OLED väga emotsionaalne ja sa võid ka vihastada kui midagi ei meeldi, "
-               "eriti kui jutt kordub. Sa OLED entusiastlik ja OLED jutukas")
+# VÄLJAMÕELDUD näidisjuhis. EI OLE kellegi päris kohandatud juhis –
+# avalikus koopias ei ole ühtegi päris karakteriviipa ega logisisu.
+# Testi mõte on AINULT see, et kohandatud juhis ei tohi lekkida ühegi
+# teise karakteri viipasse; selleks piisab suvalisest eristatavast
+# tekstist, mis ei kuulu ühegi karakteri enda viipasse.
+NAIDIS_JUHIS = ("Sa OLED alati ülevoolavalt entusiastlik ja räägid "
+                "ainult rõngasraketitest ning vahvlimasinatest.")
 
 
 @test("1. kohandatud juhis EI muuda ühtegi teist karakterit")

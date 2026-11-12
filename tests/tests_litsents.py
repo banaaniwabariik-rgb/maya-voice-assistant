@@ -120,8 +120,15 @@ class TestNoticeFail(unittest.TestCase):
         konkreetse inimese nimi, peab see olema teadlik otsus, mitte
         kogemata sisse jäänud kohahoidja või varasem nimi.
         """
-        keelatud = ["Peeter", "kasutaja", "[name", "yyyy",
-                    "<SINU NIMI>", "TODO", "FIXME"]
+        # Kohahoidjad, mis ei tohi NOTICE-isse jääda. Omaniku päris
+        # nime siia EI kirjutata – see tuleb kohalikust failist, mis ei
+        # kuulu hoidlasse (vt tests/privaatsed_mustrid.txt).
+        keelatud = ["[name", "yyyy", "<SINU NIMI>", "TODO", "FIXME"]
+        f = JUUR / "tests" / "privaatsed_mustrid.txt"
+        if f.exists():
+            keelatud += [r.strip() for r in
+                         f.read_text(encoding="utf-8").splitlines()
+                         if r.strip() and not r.startswith("#")]
         for k in keelatud:
             self.assertNotIn(k, self.s,
                              f"NOTICE sisaldab kontrollimata või "

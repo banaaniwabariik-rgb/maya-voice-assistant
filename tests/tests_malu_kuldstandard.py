@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FAAS D: mäluotsingu kuldstandard ja varipaigaldus-hindamine.
 
-Korpus on TÄIELIKULT SÜNTEETILINE. Peetri päris vestlusi siin ei kasutata
+Korpus on TÄIELIKULT SÜNTEETILINE. Ühtegi päris vestlust siin ei kasutata
 ega kuvata – tootmisandmetega tehakse ainult koondmõõtmine (vt
 tests_malu_tootmine.py), mis ei trüki ühtegi rida sisu.
 

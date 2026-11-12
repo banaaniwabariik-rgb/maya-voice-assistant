@@ -172,6 +172,7 @@ def t10():
 def t11():
     conn = fresh()
     M.upsert_fact(conn, "Peetril on valge Volvo", category="omand", confidence=0.7)
+    # Sama fakt teise tõstuga ja lõpupunktiga – peab tulema DUPLIKAAT.
     r = M.upsert_fact(conn, "peetril on valge volvo.", category="omand", confidence=0.7)
     assert r["action"] == "duplicate", r
     assert M.active_fact_count(conn) == 1, "duplikaat tekitas uue rea"

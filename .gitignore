@@ -82,3 +82,7 @@ captures/
 *.iml
 .DS_Store
 Thumbs.db
+
+# Omaniku kohalik isikuandmete mustrinimekiri (privaatsustestide sisend).
+# EI TOHI hoidlasse jõuda – mustrid ise on isikuandmed.
+tests/privaatsed_mustrid.txt

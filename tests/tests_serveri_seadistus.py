@@ -97,6 +97,31 @@ def voorad_ipd(tekst: str) -> list:
     return sorted({ip for ip in IP_MUSTER.findall(tekst)
                    if not _lubatud_ip(ip)})
 
+# =====================================================================
+# KOHALIK ISIKUANDMETE MUSTRINIMEKIRI — EI KUULU HOIDLASSE
+# =====================================================================
+# MIKS NII: varem olid omaniku nimi ja e-posti kasutajanimi siin failis
+# „keelatud stringidena" kirjas. See on iseenesest leke – avalikus
+# hoidlas oleks nimi kirjas just selles failis, mis peaks seda ära
+# hoidma. Nüüd loetakse mustrid failist, mis on `.gitignore`-is:
+#
+#     tests/privaatsed_mustrid.txt      (üks muster rea kohta, # = kommentaar)
+#
+# Kui fail puudub (avalik koopia, CI, võõras masin), jäetakse vastav
+# kontroll VAHELE ja seda öeldakse välja. Vahelejätmine EI OLE
+# õnnestumine – omanik hoiab faili oma masinas ja saab täiskontrolli.
+def privaatsed_mustrid() -> list:
+    f = JUUR / "tests" / "privaatsed_mustrid.txt"
+    if not f.exists():
+        return []
+    read = []
+    for r in f.read_text(encoding="utf-8").splitlines():
+        r = r.strip()
+        if r and not r.startswith("#"):
+            read.append(r)
+    return read
+
+
 VOTME_MUSTRID = [
     re.compile(r"AIza[0-9A-Za-z_\-]{30,}"),      # Google API võti
     re.compile(r"gsk_[0-9A-Za-z]{30,}"),          # Groq
@@ -452,12 +477,19 @@ class TestApkSisu(unittest.TestCase):
             leid = muster.search(self.tekst)
             self.assertIsNone(leid, "APK sisaldab võtmemustrit")
 
-    def test_52_apk_ei_sisalda_isikunimesid_ega_kodukohta(self):
-        # Omaniku nimed ja kodukoht – ei tohi avalikus APK-s olla.
-        for s in ("Peeter", "peeter", "kasutaja", "Peeter ",
-                  "maya_privaatne_projekt"):
-            self.assertNotIn(s.encode(), self.baidid,
-                             f"APK sisaldab isiklikku viidet: {s}")
+    def test_52_apk_ei_sisalda_isiklikke_viiteid(self):
+        """Kontrollib omaniku kohalikku mustrinimekirja, kui see on olemas.
+
+        Mustreid EI hoita selles failis – vt `privaatsed_mustrid()`.
+        """
+        mustrid = privaatsed_mustrid()
+        if not mustrid:
+            raise unittest.SkipTest(
+                "tests/privaatsed_mustrid.txt puudub – isiklike viidete "
+                "kontroll jäeti VAHELE (see ei ole õnnestumine)")
+        leitud = [m for m in mustrid if m.encode() in self.baidid]
+        self.assertEqual([], leitud,
+                         f"APK sisaldab {len(leitud)} isiklikku viidet")
 
     def test_53_apk_sisaldab_seadistusekraani(self):
         self.assertIn(b"ServerSetupActivity", self.baidid)
