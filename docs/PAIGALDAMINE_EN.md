@@ -285,7 +285,7 @@ sudo dnf install python3 python3-pip
 **Option A — with Git (recommended, easy to update):**
 
 ```bash
-git clone <repository-address> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ```
 

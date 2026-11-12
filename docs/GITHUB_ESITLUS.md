@@ -1,12 +1,15 @@
 # GitHubi esitlus — valmis tekstid
 
 Siin on **kopeeri-ja-kleebi** tekstid GitHubi hoidla väljade jaoks.
-Hoidlat ei ole veel loodud; need on ette valmistatud, et esitlus oleks
-ühtne ja et ükski väide ei läheks koodiga vastuollu.
+Hoidla on avaldatud:
+**https://github.com/banaaniwabariik-rgb/maya-voice-assistant**
+
+Need tekstid on alles, et esitlus jääks ühtseks ja et ükski väide ei
+läheks koodiga vastuollu — nii saab neid uuesti kasutada ka
+postitustes, awesome-nimekirjades ja väljalaskemärkmetes.
 
 Iga väide allpool on koodist üle kontrollitud. **Mitte ühtegi
-funktsiooni ei reklaamita, mis ei tööta** — ajastatud meeldetuletuse
-kõne on teadaolevalt katki ja seda siin ei lubata.
+funktsiooni ei reklaamita, mis ei tööta.**
 
 ---
 
@@ -146,7 +149,6 @@ ega postitustesse sattuda enne, kui nad päriselt töötavad:
 
 | Ära ütle | Miks |
 |---|---|
-| „meeldetuletused saabuvad kõnena" / „reminders call you" | ajastatud meeldetuletuse kõne **ei käivitu** (vt [ARENDUS.md](ARENDUS.md#teadaolevad-lahtised-kohad)) |
 | „helistab nagu päris telefonikõne" | **ei ole mobiilikõne** — tõuketeade serverist, mis avab rakenduses kõneekraani. Ei kasuta SIM-i, numbrit ega kõnelogi |
 | „eestikeelne mudel" | Gemini Live on **mitmekeelne** mudel; eesti keel tuleb eestikeelsetest viipadest |
 | „kalender" iseseisva funktsioonina | kalender on vaade meeldetuletuste peal; eraldi sündmusetabelit ega välist sünkroonimist ei ole |
@@ -159,7 +161,7 @@ ega postitustesse sattuda enne, kui nad päriselt töötavad:
 
 ## F. Enne avaldamist
 
-- [ ] Asenda `<hoidla-aadress>` päris Giti aadressiga (README-s, paigaldusjuhendites)
+- [x] ~~Asenda `<hoidla-aadress>` päris Giti aadressiga~~ — tehtud, kõik juhendid kasutavad päris kloonimise aadressi
 - [ ] Lisa hoidlale ülalolev kirjeldus ja teemad
 - [ ] Otsusta autoriõiguse rida failis [NOTICE](../NOTICE) (praegu projektipõhine)
 - [ ] Jooksuta `./scripts/kontrolli_privaatsust.sh` ja testid

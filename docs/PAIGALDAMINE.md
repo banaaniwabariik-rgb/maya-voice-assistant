@@ -272,13 +272,12 @@ sudo dnf install python3 python3-pip
 **Variant A — Gitiga (soovitatud, lihtne uuendada):**
 
 ```bash
-git clone <hoidla-aadress> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ```
 
-`<hoidla-aadress>` on selle projekti Giti aadress. Git teeb kaustast
-`maya` koopia ja hoiab seost, nii et hiljem saad uuendada käsuga
-`./uuenda.sh`.
+Git teeb kaustast `maya` koopia ja hoiab seost hoidlaga, nii et hiljem
+saad uuendada käsuga `./uuenda.sh`.
 
 **Variant B — ZIP-failina (Giti pole vaja):**
 

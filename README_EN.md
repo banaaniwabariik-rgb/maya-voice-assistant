@@ -260,7 +260,7 @@ You need **Python 3.11+**
 key** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
 
 ```bash
-git clone <repository-address> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ./paigalda.sh
 ```
@@ -551,3 +551,28 @@ Contributions come in **under Apache-2.0** (§5) and no CLA is required.
 service runs here. No public contribution automatically reaches any
 running installation — not the maintainer's and not anyone else's.
 Every MAYA operator decides for themselves what to update.
+
+---
+
+## 📬 Contact
+
+**Project maintainer: [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com)**
+
+Feel free to write — in English or Estonian:
+
+| What about | Where |
+|---|---|
+| **Installation question** | open an [issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues) — that way the answer helps the next person too |
+| **Bug report** | open an [issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues) |
+| **Collaboration proposal, idea, question** | [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) |
+| **I want to contribute but don't know where to start** | [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) or [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **🔒 Security vulnerability** | **do NOT open a public issue** — see [SECURITY.md](SECURITY.md) |
+
+> **Please do not email** API keys, passwords, the contents of your
+> `.env` file or conversation recordings. If you need to show an
+> example, replace the values with placeholders.
+
+This is a volunteer project — a reply may take days rather than hours.
+
+**Note on language:** MAYA's interface, characters and most of the
+documentation are in Estonian. You are welcome to write in English.

@@ -252,7 +252,7 @@ ja **Gemini API võtit**
 ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
 
 ```bash
-git clone <hoidla-aadress> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ./paigalda.sh
 ```
@@ -525,3 +525,31 @@ Panus tuleb sisse **Apache-2.0 all** (§5) ja allkirjastatavat lepingut
 töötava paigalduse sisse — ei hoidla haldaja omasse ega kellegi teise
 omasse. Iga MAYA paigaldaja otsustab ise, mida ta oma eksemplari üle
 kannab.
+
+---
+
+## 📬 Ühendust / Contact
+
+**Projekti hoidja: [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com)**
+
+Kirjuta julgelt — eesti või inglise keeles:
+
+| Mille pärast | Kuhu |
+|---|---|
+| **Küsimus paigalduse kohta** | ava [issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues) — nii aitab vastus ka järgmist inimest |
+| **Vea teade** | ava [issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues) |
+| **Koostööettepanek, idee, küsimus** | [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) |
+| **Tahan panustada, aga ei tea kust alustada** | [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) või [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **🔒 Turvaauk** | **ÄRA ava avalikku issue't** — vt [SECURITY.md](SECURITY.md) |
+
+> **Palun ära saada e-kirjaga** API võtmeid, paroole, `.env` faili sisu
+> ega vestluste salvestusi. Kui on vaja näidet, asenda väärtused
+> kohahoidjatega.
+
+See on vabatahtlik projekt — vastamine võib võtta päevi, mitte tunde.
+
+*Project maintainer: [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) — questions, ideas and
+collaboration proposals welcome in Estonian or English. For bugs and
+installation questions please open an
+[issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues);
+for security vulnerabilities see [SECURITY.md](SECURITY.md).*

@@ -69,12 +69,13 @@ repository needs no account.
 ### Step 2. Download MAYA
 
 ```bash
-git clone <repository-address> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ```
 
-`<repository-address>` is this project's Git address. If you don't have
-Git, download the ZIP from the repository and unpack it.
+If you don't have Git installed, download the ZIP from the
+[repository](https://github.com/banaaniwabariik-rgb/maya-voice-assistant)
+and unpack it.
 
 ### Step 3. Open the project in the assistant
 

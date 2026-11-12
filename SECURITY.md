@@ -4,10 +4,25 @@
 
 **Ära ava turvaaugu kohta avalikku issue't.**
 
-Kasuta GitHubi privaatset teatamist:
-**Security → Advisories → Report a vulnerability**
+### 1. Eelistatud tee: GitHubi privaatne teatamine
 
-Kui see ei ole võimalik, kirjuta hoidla haldajale privaatselt.
+**Security → Advisories → Report a vulnerability**
+([otselink](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/security/advisories/new))
+
+See on eelistatud, sest teade jääb privaatseks, jääb hoidla juurde ja
+sinu panus on hiljem nähtav.
+
+### 2. Varutee: e-kiri hoidla haldajale
+
+Kui GitHubi privaatne teatamine ei ole sulle võimalik (kontot ei ole,
+funktsioon on välja lülitatud vms), kirjuta otse:
+
+**[banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com)**
+
+Pane teemaritta `MAYA security`, et kiri ei jääks märkamata. Krüpteeritud
+kirjavahetust (PGP) praegu ei paku — kui teade on nii tundlik, et vajab
+seda, kirjuta kõigepealt lühike märguanne ilma detailideta ja lepime
+kanali kokku.
 
 > **Siin ei jookse ühtegi MAYA teenust.** Hoidla levitab lähtekoodi ja
 > APK-d; iga kasutaja käivitab backendi ise oma masinas. Seega ei ole

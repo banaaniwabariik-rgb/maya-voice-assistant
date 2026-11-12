@@ -91,3 +91,6 @@ the documentation, and MAYA's own user interface, are in Estonian.
    [peatükk 5](PAIGALDAMINE.md#5-võrk-pordid-ja-kaugligipääs).
 4. Ava issue, kui dokumentatsioon on puudulik või eksitav — see on
    samaväärne veateatega.
+5. **Otsekontakt projekti hoidjaga:**
+   [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com) — koostööettepanekud ja küsimused, eesti või
+   inglise keeles. Turvaaukude jaoks vt [../SECURITY.md](../SECURITY.md).

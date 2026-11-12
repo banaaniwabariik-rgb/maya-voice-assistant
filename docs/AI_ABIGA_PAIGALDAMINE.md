@@ -64,12 +64,13 @@ hoidla allalaadimiseks kontot vaja ei ole.
 ### Samm 2. Laadi MAYA alla
 
 ```bash
-git clone <hoidla-aadress> maya
+git clone https://github.com/banaaniwabariik-rgb/maya-voice-assistant.git maya
 cd maya
 ```
 
-`<hoidla-aadress>` on selle projekti Giti aadress. Kui Giti ei ole,
-laadi hoidlast ZIP alla ja paki lahti.
+Kui Giti ei ole paigaldatud, laadi
+[hoidlast](https://github.com/banaaniwabariik-rgb/maya-voice-assistant)
+ZIP alla ja paki lahti.
 
 ### Samm 3. Ava projekt assistendis
 

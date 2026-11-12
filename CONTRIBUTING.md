@@ -41,6 +41,28 @@ Uue sõltuvuse lisamine on **eraldi arutelu teema**: ava enne issue ja
    suuna pärast.
 2. Suurte muudatuste puhul küsi enne, kas suund sobib.
 
+### Kuidas projekti hoidjaga ühendust saada
+
+**[banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com)**
+
+| Mille pärast | Kuhu |
+|---|---|
+| Vea teade, paigaldusküsimus, konkreetne ettepanek | **[issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues)** — avalik arutelu aitab ka järgmist inimest |
+| **Koostööettepanek**, suurem suunamuutus, küsimus „kas selline PR oleks oodatud" | **[banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com)** |
+| Tahan panustada, aga ei tea, kust alustada | kirjuta samale aadressile — aitan ülesande valida |
+| 🔒 Turvaauk | **mitte avalikku issue't** — vt [SECURITY.md](SECURITY.md) |
+
+Kirjuta eesti või inglise keeles. See on vabatahtlik projekt, nii et
+vastus võib võtta päevi, mitte tunde.
+
+> **Ära saada e-kirjaga** API võtmeid, paroole, `.env` faili sisu ega
+> vestluste salvestusi — ka siis, kui tahad viga näidata. Asenda
+> väärtused kohahoidjatega.
+
+*Maintainer contact: [banaaniwabariik@gmail.com](mailto:banaaniwabariik@gmail.com). Collaboration proposals
+and questions are welcome in Estonian or English; for bugs and specific
+suggestions please open an issue instead.*
+
 ## Kuldreegel: mõõda, ära oleta
 
 See projekt on ehitatud mõõtmiste peale. Kui väidad, et midagi on
