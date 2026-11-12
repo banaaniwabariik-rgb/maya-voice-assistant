@@ -105,7 +105,7 @@ with no embellishment.
 |---|---|
 | `POST /api/trigger_call` — manually or from a script | ✅ **verified end to end** (the event arrived in the SSE stream; the server logged the device connecting) |
 | MAYA's own decision during a conversation (the `schedule_call` tool — "call me back in 5 minutes") | ⚙️ implemented, in-memory timer (lost on server restart) |
-| A scheduled reminder | ⚠️ **currently broken** — see [known limitations](#what-does-not-work-yet) |
+| A scheduled reminder (including recurring) | ✅ **verified end to end** — two users with reminders due at the same time each received ONLY their own call event (real server, real auth, real SSE) |
 | The alert reaching **all** devices on the account | ✅ fan-out, covered by 6 tests |
 | The Android side (ringtone, lock screen, answering) | ⚙️ implemented, **unverified on a real device** |
 
@@ -154,7 +154,7 @@ Every row has been checked against the code. Status: ✅ tested ·
 | **Per-character delivery** | ⚙️ | the character that created a reminder also delivers it (e.g. a rhyming wake-up created as the singer) |
 | **Morning briefing** | ⚙️ | `notify_type=briefing` gathers the data **at call time**, not when saved |
 | **Calendar view** | 🧪 | month and list view (`calendar_module.js`), per-day filtering, edit/delete. **There is no separate calendar table** — the calendar is a view over reminders |
-| **Scheduled reminder call** | ⚠️ | **does not fire** — see below |
+| **Scheduled reminder call** | ✅ | the background watcher walks every user database, sets each user's context and delivers the call event to the RIGHT user — 25 tests plus a live-server check |
 
 ### Android and the rest
 
@@ -179,7 +179,6 @@ help counts most.
 
 | Problem | The actual situation |
 |---|---|
-| **Scheduled reminders don't call** | The background watcher reads the **shared** database, but an authenticated user's reminders go into their **per-user** database. Verified experimentally: the reminder was stored in `data/users/1/reminders.db`, the watcher looked at `data/reminders.db`, and no call was triggered. A manually triggered call (`/api/trigger_call`) **does work**. This single fix would restore the whole reminder chain |
 | **Unverified on a real device** | no feature has been tested on a **physical phone** with this public build |
 | **`schedule_call` doesn't survive a restart** | the timer is in memory (`asyncio`); restarting the server loses it |
 | **HTTPS is not built in** | a reverse proxy is mandatory on the public internet; documented, not automated |
@@ -513,8 +512,7 @@ places to start.
 
 | Difficulty | Task | Why it matters |
 |---|---|---|
-| 🟢 **small, high impact** | **Fix the scheduled reminder call.** The background watcher reads the shared database while a user's reminders live in the per-user one. One targeted fix restores the whole reminder chain | the biggest win for the least work in the project |
-| 🟢 small | **Test coverage for the reminder watcher.** This chain broke unnoticed because no test checked whether the watcher actually fires | that one test would have caught the bug |
+| 🟡 medium | **The reminder watcher is now multi-user** (`tootle_meeldetuletused`). Next step: the interval is a fixed 5 s and the database list is rebuilt every cycle — worth making smarter for large user counts | fine today, but it will not scale to hundreds of users |
 | 🟡 medium | **Make `schedule_call` survive a restart** — the timer is currently in memory | MAYA's promise "I'll call you in 5 minutes" should hold across a restart too |
 | 🟡 medium | **Android work**: battery-saver behaviour across OEMs, call-screen polish, audio routing (Bluetooth, earpiece, speaker) | the calling feature lives or dies on Android background restrictions |
 | 🟡 medium | **Memory, reminders, calendar**: repeat rules (4 types today), calendar-view fixes, external sync | the calendar is currently a view over reminders, not a real calendar |

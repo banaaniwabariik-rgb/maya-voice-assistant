@@ -1,13 +1,15 @@
 # Karakteri algatatud kõne
 
-> ### ⚠️ Praegune olek
-> **Käsitsi käivitatud kõne töötab** (`POST /api/trigger_call` →
-> SSE → telefon; kontrollitud otsast lõpuni).
+> ### Praegune olek
+> **Mõlemad kõneallikad töötavad ja on kontrollitud:**
 >
-> **Ajastatud meeldetuletuse kõne EI käivitu**: taustavalvur loeb ühist
-> andmebaasi, aga kasutaja meeldetuletused lähevad kasutajapõhisesse.
-> Täpne diagnoos ja parandamise juhis:
-> [ARENDUS.md → Teadaolevad lahtised kohad](ARENDUS.md#teadaolevad-lahtised-kohad).
+> * **käsitsi** — `POST /api/trigger_call` → SSE → telefon;
+> * **ajastatud meeldetuletus** (sh korduv) — taustavalvur käib läbi
+>   kõik kasutajabaasid ja saadab kõneteate õigele kasutajale.
+>
+> Kontrollitud päris serveriga: kaks autenditud kasutajat,
+> meeldetuletus samal ajal → kumbki sai AINULT oma kõneteate.
+> Mitme kasutaja valvuri ehitus: [ARENDUS.md](ARENDUS.md#teadaolevad-lahtised-kohad).
 
 
 MAYA eristuv funktsioon: karakter helistab **ise** telefonile ja

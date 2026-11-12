@@ -80,21 +80,57 @@ def fetch_song_lyrics(query: str) -> str:
 
     return "Laulusõnu ega akorde ei leitud. Loo ja improviseeri meloodia ja harmoonia ise kohapeal."
 
-PENDING_CALL_PROMPT = None
-PENDING_CALL_PERSONA = None
+# =====================================================================
+# TAGASIHELISTAMISE OOTEL SÕNUM — KASUTAJAPÕHINE
+# =====================================================================
+# MIKS SÕNASTIK JA MITTE ÜKS GLOBAAL:
+# Varem olid need kaks lihtsad moodulitasandi globaalid. Ühe kasutajaga
+# paigalduses töötas see hästi, aga mitme kasutajaga tekkis SISULEKE:
+# kui kahel kasutajal oli meeldetuletus samal ajal, kirjutas teine
+# esimese sõnumi üle ja selle sai endale see, kes esimesena vastas –
+# ükskõik kumb kasutaja see oli. Nii võis kasutaja A meeldetuletuse
+# tekst jõuda kasutaja B telefoni.
+#
+# Nüüd on sõnum ja karakter seotud KASUTAJA ID-ga. Võti 0 on
+# „ühine/omaniku" pesa: seda kasutab autentimiseta vanem kood ja
+# taustaülesanne, millel kasutajakontekst puudub.
+_YHINE_PESA = 0
+
+PENDING_CALL_PROMPT: dict = {}
+PENDING_CALL_PERSONA: dict = {}
 
 
-def set_pending_call_prompt(prompt: str, persona: str = ""):
+def set_pending_call_prompt(prompt: str, persona: str = "", uid=None):
     """Seab tagasihelistamise sõnumi ja (valikuliselt) karakteri.
 
     `persona` lisandus selleks, et meeldetuletus esitataks SAMA karakteriga,
     kes selle lõi. Varem helistas alati see karakter, mis kliendis parajasti
     valitud oli – lauljana loodud riimuva äratuse võis ette kanda 'asjalik',
     kellel on laulmine lausa keelatud.
+
+    `uid` määrab, KELLE kõne see on. Kui seda ei anta, võetakse aktiivne
+    kasutaja kontekstist; kui ka seda ei ole, läheb sõnum ühisesse pessa.
     """
-    global PENDING_CALL_PROMPT, PENDING_CALL_PERSONA
-    PENDING_CALL_PROMPT = prompt
-    PENDING_CALL_PERSONA = (persona or "").strip().lower() or None
+    if uid is None:
+        uid = config.aktiivne_kasutaja()
+    pesa = _YHINE_PESA if uid is None else int(uid)
+    PENDING_CALL_PROMPT[pesa] = prompt
+    p = (persona or "").strip().lower()
+    if p:
+        PENDING_CALL_PERSONA[pesa] = p
+    else:
+        PENDING_CALL_PERSONA.pop(pesa, None)
+
+
+def _vota_pending(ladu: dict, uid):
+    """Võta (ja eemalda) selle kasutaja ootel väärtus.
+
+    Kui kasutajapõhist kirjet ei ole, kukume tagasi ühisesse pessa –
+    nii töötab endiselt autentimiseta/ühe kasutaja paigaldus.
+    """
+    if uid is not None and int(uid) in ladu:
+        return ladu.pop(int(uid))
+    return ladu.pop(_YHINE_PESA, None)
 
 
 # --- KARAKTERIPÕHISED HÄÄLED ---------------------------------------------
@@ -1996,16 +2032,16 @@ async def websocket_live_maya(websocket: WebSocket):
 
     # Tagasihelistamine: kui meeldetuletus salvestati kindla karakteriga, siis
     # esitab selle SEESAMA karakter – mitte see, mis kliendis parajasti valitud.
-    global PENDING_CALL_PERSONA
-    if PENDING_CALL_PERSONA:
-        if PENDING_CALL_PERSONA != active_persona:
+    # Võtame AINULT selle kasutaja ootel karakteri (vt _vota_pending).
+    _ootel_persona = _vota_pending(PENDING_CALL_PERSONA, _kasutaja["id"])
+    if _ootel_persona:
+        if _ootel_persona != active_persona:
             print(
                 f"--> [LIVE WS]: Tagasihelistamine – karakter '{active_persona}' asendatud "
-                f"meeldetuletuse omaga: '{PENDING_CALL_PERSONA}'",
+                f"meeldetuletuse omaga: '{_ootel_persona}'",
                 flush=True,
             )
-        active_persona = PENDING_CALL_PERSONA
-        PENDING_CALL_PERSONA = None
+        active_persona = _ootel_persona
 
     # Kõigi karakterite ühine vundament: elav inimlikkus, loomulik eesti keel, 0 korporatiivset filtrit
     BASE_ORGANIC_VIBE = (
@@ -2570,14 +2606,15 @@ async def websocket_live_maya(websocket: WebSocket):
             async def grealtime(**kw):
                 await session.send_realtime_input(**kw)
 
-            global PENDING_CALL_PROMPT
-            if PENDING_CALL_PROMPT:
+            # Võtame AINULT selle kasutaja ootel sõnumi. Teise kasutaja
+            # meeldetuletuse tekst ei tohi siia kunagi sattuda.
+            _ootel_sonum = _vota_pending(PENDING_CALL_PROMPT, _kasutaja["id"])
+            if _ootel_sonum:
                 init_msg = (
                     f"Kõne võeti vastu. Alusta KOHE vestlust oma karakteri rollis ilma kasutaja sisendit ootamata! "
-                    f"Sinu ülesanne/sõnum selleks kõneks: {PENDING_CALL_PROMPT}"
+                    f"Sinu ülesanne/sõnum selleks kõneks: {_ootel_sonum}"
                 )
                 print(f"--> [LIVE WS]: Saadan Geminile kohese avakäsu: {init_msg}", flush=True)
-                PENDING_CALL_PROMPT = None
                 await gsend(input=init_msg, end_of_turn=True)
 
             running = True

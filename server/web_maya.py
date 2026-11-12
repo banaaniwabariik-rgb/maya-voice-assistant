@@ -66,6 +66,7 @@ def requests_quote(text):
 
 from fastapi import Request, Header, Form
 import os
+import pathlib
 import io
 import asyncio
 import datetime
@@ -903,86 +904,203 @@ def build_morning_briefing() -> str:
     return "\n".join(parts) if parts else "Andmeid ei õnnestunud koguda."
 
 
-async def background_reminder_watcher():
-    import sqlite3, datetime
-    from zoneinfo import ZoneInfo
-    while True:
+# =====================================================================
+# MEELDETULETUSTE TAUSTAVALVUR — MITME KASUTAJA TUGI
+# =====================================================================
+# JUURPÕHJUS, MIDA SEE PARANDAB
+# -----------------------------
+# Valvur jookseb taustaülesandena, millel EI OLE kasutajakonteksti.
+# `config.connect()` tagastab siis ÜHISE andmebaasi (`config.DB_TEE`).
+# Autenditud päring seevastu seab konteksti (`noua_kasutaja` ->
+# `config.sea_aktiivne_kasutaja`), nii et kasutaja meeldetuletus
+# salvestub KASUTAJAPÕHISESSE baasi `data/users/<id>/reminders.db`.
+# Valvur ei näinud neid kunagi ja ükski ajastatud kõne ei käivitunud.
+#
+# LAHENDUS
+# --------
+# Valvur käib igal tsüklil läbi KÕIK meeldetuletuste baasid: ühise
+# baasi (ühilduvus autentimiseta paigaldusega) ja iga kausta
+# `data/users/<id>/`. Iga baasi juures SEATAKSE selle kasutaja
+# kontekst, nii et:
+#   * `config.connect()` avab õige faili;
+#   * `call_event_queue.put()` -> `kone_publitseeri` läheb ÕIGE
+#     kasutaja seadmetele (mitte enam tagasilangus kasutajale #1);
+#   * `set_pending_call_prompt()` seob sõnumi õige kasutajaga.
+# Iga baas on oma `try/except`-is: ühe kasutaja vigane baas ei peata
+# teiste kasutajate meeldetuletusi.
+
+
+def meeldetuletuste_baasid() -> list:
+    """Kõik meeldetuletuste baasid kujul [(uid, tee), ...].
+
+    `uid=None` tähendab ühist baasi (autentimiseta paigaldus või
+    vanad andmed). Kasutajapõhised baasid tulevad kaustast
+    `<andmekaust>/users/<id>/reminders.db`.
+
+    Tagastab ainult OLEMASOLEVAD failid – puuduvat baasi ei looda,
+    sest valvur ei tohi tühja faili tekitamisega skeemi algatada.
+    """
+    read = []
+    try:
+        if os.path.exists(config.DB_TEE):
+            read.append((None, config.DB_TEE))
+    except Exception:
+        pass
+    try:
+        juur = pathlib.Path(config.ANDMED) / "users"
+        if juur.is_dir():
+            for kaust in sorted(juur.iterdir()):
+                if not kaust.is_dir() or not kaust.name.isdigit():
+                    continue
+                tee = kaust / "reminders.db"
+                if tee.exists():
+                    read.append((int(kaust.name), str(tee)))
+    except Exception as e:
+        print(f"--> [VALVUR] kasutajabaaside loendamine nurjus: {e}", flush=True)
+    return read
+
+
+async def tootle_meeldetuletused(uid, tee: str, now_str: str) -> int:
+    """Töötle ÜHE baasi aegunud meeldetuletused. Tagastab käivitatud arvu.
+
+    Kutsuja hoolitseb vigade isolatsiooni eest. Siin sees seatakse
+    kasutajakontekst, nii et kõneteade ja ootel sõnum lähevad õigele
+    kasutajale.
+    """
+    kaivitatud = 0
+    # Kasutajakontekst KOGU töötlemise ajaks: nii avab `config.connect()`
+    # õige faili ja `call_event_queue.put()` leiab õige kasutaja.
+    ctx = config.sea_aktiivne_kasutaja(uid) if uid is not None else None
+    conn = None
+    try:
+        conn = config.connect(timeout=10, tee=tee)
+        c = conn.cursor()
+        # 'persona' ja 'notify_type' veerud lisandusid hiljem – loeme need
+        # turvaliselt, et vanad baasid ei lõhuks valvurit.
         try:
-            now_dt = datetime.datetime.now(ZoneInfo("Europe/Tallinn"))
-            now_str = now_dt.strftime("%Y-%m-%d %H:%M")
-            conn = config.connect(timeout=10)
-            c = conn.cursor()
-            # 'persona' veerg lisati hiljem – loeme selle turvaliselt, et
-            # vanad baasid (kus veergu veel pole) ei lõhuks valvurit.
-            try:
-                _rcols = [r[1] for r in c.execute("PRAGMA table_info(reminders)").fetchall()]
-            except Exception:
-                _rcols = []
-            _persona_sel = ", persona" if "persona" in _rcols else ", '' AS persona"
-            _notify_sel = ", notify_type" if "notify_type" in _rcols else ", 'call' AS notify_type"
-            due = c.execute(f"""
-                SELECT id, trigger_time, reminder_text, repeat_type, custom_speech{_persona_sel}{_notify_sel}
-                FROM reminders 
-                WHERE trigger_time <= ? AND is_done = 0
-            """, (now_str,)).fetchall()
-            
-            for rem_id, trig_time, rem_text, rep_type, cust_speech, rem_persona, rem_notify in due:
-                rep_type = rep_type or "none"
-                if rep_type == "none":
-                    c.execute("UPDATE reminders SET is_done = 1 WHERE id = ?", (rem_id,))
-                else:
-                    try:
-                        cur_t = datetime.datetime.strptime(trig_time, "%Y-%m-%d %H:%M")
-                        if rep_type == "daily":
-                            next_t = cur_t + datetime.timedelta(days=1)
-                        elif rep_type == "weekly":
-                            next_t = cur_t + datetime.timedelta(days=7)
+            _rcols = [r[1] for r in c.execute("PRAGMA table_info(reminders)").fetchall()]
+        except Exception:
+            _rcols = []
+        if "trigger_time" not in _rcols:
+            # Selles baasis ei ole (veel) meeldetuletuste tabelit.
+            return 0
+        _persona_sel = ", persona" if "persona" in _rcols else ", '' AS persona"
+        _notify_sel = ", notify_type" if "notify_type" in _rcols else ", 'call' AS notify_type"
+        due = c.execute(f"""
+            SELECT id, trigger_time, reminder_text, repeat_type, custom_speech{_persona_sel}{_notify_sel}
+            FROM reminders
+            WHERE trigger_time <= ? AND is_done = 0
+            ORDER BY trigger_time
+        """, (now_str,)).fetchall()
+
+        for rem_id, trig_time, rem_text, rep_type, cust_speech, rem_persona, rem_notify in due:
+            rep_type = rep_type or "none"
+            # TÄPSELT ÜKS KORD: olek uuendatakse ja COMMIT'itakse ENNE
+            # kõneteate saatmist. Kui protsess sureb kõneteate ja
+            # järgmise tsükli vahel, jääb kõne ära – aga kordus EI
+            # tule. Topeltkõne on kasutajale halvem kui üks kadunud.
+            if rep_type == "none":
+                c.execute("UPDATE reminders SET is_done = 1 WHERE id = ?", (rem_id,))
+            else:
+                try:
+                    cur_t = datetime.datetime.strptime(trig_time, "%Y-%m-%d %H:%M")
+                    if rep_type == "daily":
+                        next_t = cur_t + datetime.timedelta(days=1)
+                    elif rep_type == "weekly":
+                        next_t = cur_t + datetime.timedelta(days=7)
+                    elif rep_type == "workdays":
+                        next_t = cur_t + datetime.timedelta(days=1)
+                        while next_t.weekday() >= 5:
+                            next_t += datetime.timedelta(days=1)
+                    else:
+                        next_t = cur_t + datetime.timedelta(days=1)
+                    # SEISMA JÄÄNUD KORDUS: kui server oli maas mitu
+                    # perioodi, lükkame järgmise aja tulevikku, muidu
+                    # käivituks sama kordus igal tsüklil uuesti.
+                    _kaitse = 0
+                    while next_t.strftime("%Y-%m-%d %H:%M") <= now_str and _kaitse < 4000:
+                        if rep_type == "weekly":
+                            next_t += datetime.timedelta(days=7)
                         elif rep_type == "workdays":
-                            next_t = cur_t + datetime.timedelta(days=1)
+                            next_t += datetime.timedelta(days=1)
                             while next_t.weekday() >= 5:
                                 next_t += datetime.timedelta(days=1)
                         else:
-                            next_t = cur_t + datetime.timedelta(days=1)
-                        c.execute("UPDATE reminders SET trigger_time = ? WHERE id = ?", (next_t.strftime("%Y-%m-%d %H:%M"), rem_id))
-                    except Exception as re:
-                        print(f"Korduse arvutamise viga: {re}", flush=True)
-                        c.execute("UPDATE reminders SET is_done = 1 WHERE id = ?", (rem_id,))
-                conn.commit()
+                            next_t += datetime.timedelta(days=1)
+                        _kaitse += 1
+                    c.execute("UPDATE reminders SET trigger_time = ? WHERE id = ?",
+                              (next_t.strftime("%Y-%m-%d %H:%M"), rem_id))
+                except Exception as re:
+                    print(f"Korduse arvutamise viga: {re}", flush=True)
+                    c.execute("UPDATE reminders SET is_done = 1 WHERE id = ?", (rem_id,))
+            conn.commit()
 
-                print(f"--> [ANDROID CALL] Käivitan meeldetuletuse kõne: '{rem_text}' (Kordus: {rep_type})", flush=True)
-                if (rem_notify or "").lower() == "briefing":
-                    # Hommikubriifing: andmed kogutakse HELISTAMISE HETKEL, mitte
-                    # salvestamise ajal – muidu oleks ilmateade eilne.
-                    brief = await asyncio.to_thread(build_morning_briefing)
-                    greeting_msg = (
-                        f"Tee {user_profile.get_name()}ile lühike hommikubriifing "
-                        "OMA KARAKTERI STIILIS. "
-                        "Ära loe andmeid masinlikult ette – räägi need loomulikult ja "
-                        "lühidalt kokku, kõige tähtsam enne. Lõpeta küsimusega, kas ta "
-                        "soovib millestki täpsemalt kuulda.\n\nANDMED:\n" + brief
-                    )
-                elif cust_speech and cust_speech.strip():
-                    greeting_msg = cust_speech.strip()
-                else:
-                    cleaned = clean_reminder_for_speech(rem_text)
-                    greeting_msg = f"Kuule! Helistan sulle, sest tahtsid meelde tuletada: {cleaned}"
-                
-                print(
-                    f"--> [OTSE GEMINI LIVE KÕNE]: Tervitusprompt seatud: '{greeting_msg}'"
-                    + (f" (karakter: {rem_persona})" if rem_persona else ""),
-                    flush=True,
+            print(f"--> [ANDROID CALL] Käivitan meeldetuletuse kõne: '{rem_text}' "
+                  f"(Kordus: {rep_type}, kasutaja: {uid if uid is not None else 'ühine'})",
+                  flush=True)
+            if (rem_notify or "").lower() == "briefing":
+                # Hommikubriifing: andmed kogutakse HELISTAMISE HETKEL, mitte
+                # salvestamise ajal – muidu oleks ilmateade eilne.
+                brief = await asyncio.to_thread(build_morning_briefing)
+                greeting_msg = (
+                    f"Tee {user_profile.get_name()}ile lühike hommikubriifing "
+                    "OMA KARAKTERI STIILIS. "
+                    "Ära loe andmeid masinlikult ette – räägi need loomulikult ja "
+                    "lühidalt kokku, kõige tähtsam enne. Lõpeta küsimusega, kas ta "
+                    "soovib millestki täpsemalt kuulda.\n\nANDMED:\n" + brief
                 )
-                # Karakter antakse kaasa, et meeldetuletuse esitaks seesama
-                # karakter, kes selle lõi (nt lauljana loodud riimuv äratus).
-                set_pending_call_prompt(greeting_msg, rem_persona or "")
-                await call_event_queue.put(f"Meeldetuletus: {greeting_msg}")
-            conn.close()
-            await asyncio.sleep(5)
+            elif cust_speech and cust_speech.strip():
+                greeting_msg = cust_speech.strip()
+            else:
+                cleaned = clean_reminder_for_speech(rem_text)
+                greeting_msg = f"Kuule! Helistan sulle, sest tahtsid meelde tuletada: {cleaned}"
+
+            print(
+                f"--> [OTSE GEMINI LIVE KÕNE]: Tervitusprompt seatud: '{greeting_msg}'"
+                + (f" (karakter: {rem_persona})" if rem_persona else ""),
+                flush=True,
+            )
+            # Karakter antakse kaasa, et meeldetuletuse esitaks seesama
+            # karakter, kes selle lõi (nt lauljana loodud riimuv äratus).
+            # `uid` antakse SELGELT kaasa, et sõnum ei satuks teise
+            # kasutaja kõnesse.
+            set_pending_call_prompt(greeting_msg, rem_persona or "", uid=uid)
+            await call_event_queue.put(f"Meeldetuletus: {greeting_msg}")
+            kaivitatud += 1
+    finally:
+        # Ühendus ja kontekst vabastatakse ALATI, ka erindi korral.
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        if ctx is not None:
+            config.taasta_aktiivne_kasutaja(ctx)
+    return kaivitatud
+
+
+async def background_reminder_watcher():
+    """Käib iga 5 s järel läbi KÕIK meeldetuletuste baasid.
+
+    Vigade isolatsioon on kahekihiline: üks vigane baas ei peata teisi
+    baase, ja ootamatu viga tsükli tasemel ei tapa valvurit.
+    """
+    while True:
+        try:
+            now_str = datetime.datetime.now(
+                ZoneInfo(config.AJAVOOND)).strftime("%Y-%m-%d %H:%M")
+            for uid, tee in meeldetuletuste_baasid():
+                try:
+                    await tootle_meeldetuletused(uid, tee, now_str)
+                except Exception as e:
+                    # AINULT selle kasutaja baas jääb vahele; teised
+                    # töödeldakse edasi.
+                    print(f"--> [VALVUR] kasutaja "
+                          f"{uid if uid is not None else 'ühine'} baasi viga: {e}",
+                          flush=True)
         except Exception as e:
             print("Viga meeldetuletuste valvuris:", e, flush=True)
-            await asyncio.sleep(5)
-
-
+        await asyncio.sleep(5)
 # =====================================================================
 # MAYA KALENDRI JA MEELDETULETUSTE REST API
 # =====================================================================

@@ -98,7 +98,7 @@ ilma ilustamata.
 |---|---|
 | `POST /api/trigger_call` — käsitsi või skriptiga | ✅ **otsast lõpuni kontrollitud** (sündmus jõudis SSE-voogu, server logis seadme ühenduse) |
 | MAYA enda otsus vestluse ajal (`schedule_call` tööriist — „helista mulle 5 minuti pärast") | ⚙️ implementeeritud, mälus olev taimer (serveri taaskäivitus kustutab) |
-| Ajastatud meeldetuletus | ⚠️ **praegu KATKI** — vt [teadaolevad piirangud](#mis-ei-tööta-veel) |
+| Ajastatud meeldetuletus (sh korduv) | ✅ **otsast lõpuni kontrollitud** — kaks kasutajat, meeldetuletus samal ajal: kumbki sai AINULT oma kõneteate (päris server, päris autentimine, päris SSE) |
 | Kõne jõudmine **kõigisse** sama konto seadmetesse | ✅ fan-out, kaetud 6 testiga |
 | Androidi pool (helin, lukustuskuva, vastamine) | ⚙️ implementeeritud, **päris seadmes kontrollimata** |
 
@@ -147,7 +147,7 @@ Iga rida on koodis üle kontrollitud. Olekud: ✅ testitud ·
 | **Karakteripõhine esitus** | ⚙️ | meeldetuletuse loonud karakter esitab selle ka ette (nt lauljana loodud riimuv äratus) |
 | **Hommikubriifing** | ⚙️ | `notify_type=briefing` kogub andmed **helistamise hetkel**, mitte salvestamise ajal |
 | **Kalendrivaade** | 🧪 | kuu- ja nimekirjavaade (`calendar_module.js`), päevade kaupa, muuda/kustuta. **Eraldi kalendritabelit ei ole** — kalender on vaade meeldetuletuste peal |
-| **Ajastatud meeldetuletuse kõne** | ⚠️ | **ei käivitu** — vt allpool |
+| **Ajastatud meeldetuletuse kõne** | ✅ | taustavalvur käib läbi kõik kasutajabaasid, seab iga kasutaja konteksti ja saadab kõneteate ÕIGELE kasutajale — 25 testi + päris serveri kontroll |
 
 ### Android ja muu
 
@@ -172,7 +172,6 @@ abi kõige rohkem loeb.
 
 | Probleem | Täpsem olukord |
 |---|---|
-| **Ajastatud meeldetuletus ei helista** | Taustavalvur loeb **ühist** andmebaasi, aga autenditud kasutaja meeldetuletused lähevad **kasutajapõhisesse** andmebaasi. Kontrollitud katseliselt: meeldetuletus salvestus faili `data/users/1/reminders.db`, valvur vaatas `data/reminders.db` ja kõnet ei tulnud. Käsitsi käivitatud kõne (`/api/trigger_call`) **töötab**. Üksi see parandus teeks kogu meeldetuletuste ahela töökorda |
 | **Päris seadmes kontrollimata** | ükski funktsioon ei ole selle avaliku koopiaga **päris telefonis** läbi testitud |
 | **`schedule_call` ei ela taaskäivitust üle** | taimer on mälus (`asyncio`), serveri taaskäivitus kustutab selle |
 | **HTTPS ei ole sisse ehitatud** | avalikus internetis on pöördproksi kohustuslik; dokumenteeritud, mitte automatiseeritud |
@@ -490,8 +489,7 @@ kohti](#mis-ei-tööta-veel). Just need on parimad kohad, kust alustada.
 
 | Raskus | Ülesanne | Miks see loeb |
 |---|---|---|
-| 🟢 **väike, suur mõju** | **Paranda ajastatud meeldetuletuse kõne.** Taustavalvur loeb ühist andmebaasi, kasutaja meeldetuletused on kasutajapõhises. Üks sihitud parandus taastab kogu meeldetuletuste ahela | kõige suurem võit vähima tööga kogu projektis |
-| 🟢 väike | **Testi katet meeldetuletuste valvurile.** Selle ahela katkemine jäi märkamatuks, sest ükski test ei kontrollinud, kas valvur päriselt käivitub | just see test oleks vea ära püüdnud |
+| 🟡 keskmine | **Meeldetuletuste valvur on nüüd mitme kasutaja peal** (`tootle_meeldetuletused`). Järgmine samm: valvuri intervall on fikseeritud 5 s ja baase loetakse igal tsüklil uuesti — suure kasutajate arvu juures tasuks see nutikamaks teha | praegu piisav, aga ei skaleeru sadade kasutajateni |
 | 🟡 keskmine | **Tee `schedule_call` taaskäivitust üleelavaks** — praegu on taimer mälus | MAYA lubadus „helistan 5 minuti pärast" peab pidama ka pärast serveri taaskäivitust |
 | 🟡 keskmine | **Androidi funktsionaalsus**: akusäästu käitumine OEM-ide lõikes, kõneekraani viimistlus, helitee (Bluetooth, kuular, kõlar) | kõnefunktsioon seisab või kukub Androidi taustapiirangute taga |
 | 🟡 keskmine | **Mälu, meeldetuletused, kalender**: korduste reeglid (praegu 4 tüüpi), kalendrivaate parandused, väline sünkroonimine | kalender on praegu vaade meeldetuletuste peal, mitte päris kalender |
