@@ -13,6 +13,13 @@ Iga test siin vastab ÜHELE auditi leiule. Need kolm viga olid tootmises korraga
 
 KÄIVITAMINE: python3 tests_malu_karakteri_eraldatus.py
 Testid kasutavad AINULT ajutist andmebaasi. Tootmisbaasi ei puudutata.
+
+SÜNTEETILISED ANDMED
+--------------------
+Kõik siin esinevad „faktid" inimeste kohta (nimed, vara, tervis,
+suhted, eelistused) on VÄLJAMÕELDUD testiandmed. Nad ei kirjelda ühtegi
+päris inimest ega pärine ühestki päris vestlusest, logist ega
+mäluandmebaasist. Näiteisik on „Peeter".
 """
 
 import os

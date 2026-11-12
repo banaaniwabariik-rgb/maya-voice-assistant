@@ -23,9 +23,18 @@ reeglite kohta.
 | `tests_privaatsus_tootmine.py` | privaatsusjuhiste rakendamine faktitasemel |
 | `tests_karakterite_eraldatus.py` | karakterid ei leki üksteisesse |
 | `tests_krediidi_haldus.py` | kulu ja krediidi arvestus |
-| `isiklikud_naited/` | **ei jooksutata** – vt selle kausta README-d |
 
 ## Märkused avaliku koopia kohta
+
+- **Kaust `isiklikud_naited/` on eemaldatud.** Seal olid testid, mis
+  kontrollisid originaalpaigalduse ISIKLIKKE karakteriviipasid.
+  Privaatsusaudit tuvastas, et need sisaldasid nende viipade
+  sõnasõnalisi katkeid ja räsisid, mistõttu kaust on kustutatud ka
+  Git-ajaloost. Kui kirjutad oma karakterid, kirjuta nende testid ise –
+  eeskuju annab `tests_karakterite_eraldatus.py`.
+- **Testide näiteisik on väljamõeldud.** Mälu- ja
+  privaatsustestide „faktid" (nimed, auto, tervis, suhted) on
+  SÜNTEETILISED ja ei kirjelda ühtegi päris inimest.
 
 - **Päris Gemini Live teste ei ole.** Jäljendatud asünkroonsed testid
   kasutavad päris `conversation_flow` moodulit, aga jäljendatud seanssi

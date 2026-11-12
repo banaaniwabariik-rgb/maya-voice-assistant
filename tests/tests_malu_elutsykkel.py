@@ -2,6 +2,13 @@
 """FAAS D: faktide elutsükli ja skeemi testid.
 
 Kõik andmed on sünteetilised, DB on :memory: – tootmisandmeid ei puututa.
+
+SÜNTEETILISED ANDMED
+--------------------
+Kõik siin esinevad „faktid" inimeste kohta (nimed, vara, tervis,
+suhted, eelistused) on VÄLJAMÕELDUD testiandmed. Nad ei kirjelda ühtegi
+päris inimest ega pärine ühestki päris vestlusest, logist ega
+mäluandmebaasist. Näiteisik on „Peeter".
 """
 
 import sqlite3

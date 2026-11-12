@@ -3,6 +3,13 @@
 
 Kasutab AINULT ajutisi andmebaase. Tootmise reminders.db't ei puudutata.
 KÄIVITAMINE: python3 tests_privaatsus_tootmine.py
+
+SÜNTEETILISED ANDMED
+--------------------
+Kõik siin esinevad „faktid" inimeste kohta (nimed, vara, tervis,
+suhted, eelistused) on VÄLJAMÕELDUD testiandmed. Nad ei kirjelda ühtegi
+päris inimest ega pärine ühestki päris vestlusest, logist ega
+mäluandmebaasist. Näiteisik on „Peeter".
 """
 
 import json
