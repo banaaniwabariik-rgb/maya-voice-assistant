@@ -60,6 +60,44 @@ switching characters, the live transcript and the call controls.
 
 ---
 
+## Download the Android app
+
+<p align="center">
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest/download/maya-android.apk"><img alt="Download the APK" src="https://img.shields.io/badge/⬇%20Download-maya--android.apk-2ea44f?style=for-the-badge"></a>
+  <br>
+  <sub><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest">all releases and the SHA-256 sum</a> · Android 8.0+ · <strong>early preview</strong></sub>
+</p>
+
+> ### ⚠️ The app does nothing on its own
+> MAYA's brain lives on **your own server** and uses **your own Gemini
+> API key**. Without a server you only get the setup screen. Setting the
+> server up takes about 15 minutes and needs no programming — see the
+> [installation guide](docs/PAIGALDAMINE_EN.md).
+
+**Three steps:**
+
+| | |
+|---|---|
+| **1. Set up the server** | [installation guide](docs/PAIGALDAMINE_EN.md) or `./paigalda.sh`. You need **your own Gemini API key** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) — **Google bills it to you**, not to the MAYA project |
+| **2. Install the APK** | Android will ask permission to install "from an unknown source". That is normal: the APK does not come from the Play Store |
+| **3. Tell the app your server address** | On first launch the app asks for the address (e.g. `http://192.168.1.50:8000`). Press **"Testi ühendust"** (test connection) — it reports honestly whether the connection worked. You can change the address later from the setup screen |
+
+The APK contains **no server address and no API key** — the key stays on
+your server. An automated test checks this on every build.
+
+**About signing:** the APK is signed with the project's **persistent**
+key, so future releases install as an update over this one without you
+having to uninstall the old version.
+
+> **An honest warning.** The original MAYA has run on a OnePlus 6 for
+> several months, but **nobody has tested this public build on a real
+> phone.** It has been inspected byte by byte, but there is no
+> physical-device confirmation. If you try it, please
+> [open an issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues)
+> and say whether it worked — that is the most useful contribution right now.
+
+---
+
 ## What makes MAYA different from an ordinary AI chatbot?
 
 An ordinary chatbot **waits for you to start**. You open an app, type a
@@ -129,7 +167,7 @@ with no embellishment.
 | MAYA's own decision during a conversation (the `schedule_call` tool — "call me back in 5 minutes") | ⚙️ implemented, in-memory timer (lost on server restart) |
 | A scheduled reminder (including recurring) | ✅ **verified end to end** — two users with reminders due at the same time each received ONLY their own call event (real server, real auth, real SSE) |
 | The alert reaching **all** devices on the account | ✅ fan-out, covered by 6 tests |
-| The Android side (ringtone, lock screen, answering) | ⚙️ implemented, **unverified on a real device** |
+| The Android side (ringtone, lock screen, answering) | ⚙️ implemented. **The original runs on a OnePlus 6** (daily use over several months; the [demo video](#maya-in-action--oneplus-6) was recorded there). **This public build** has not been re-verified on a physical device |
 
 ---
 
@@ -201,7 +239,7 @@ help counts most.
 
 | Problem | The actual situation |
 |---|---|
-| **Unverified on a real device** | no feature has been tested on a **physical phone** with this public build |
+| **The public build is unverified on a real device** | MAYA itself is **not untested**: the original application has run on a **OnePlus 6 for several months**, and the [demo video](#maya-in-action--oneplus-6) comes from that phone. What is unverified is **this public build** — nobody has yet run this particular APK through a physical phone |
 | **`schedule_call` doesn't survive a restart** | the timer is in memory (`asyncio`); restarting the server loses it |
 | **HTTPS is not built in** | a reverse proxy is mandatory on the public internet; documented, not automated |
 | **Call alerts use SSE, not FCM** | which is why the Android **battery exemption is mandatory**; the FCM analysis is in [docs/KONEALGATUS.md](docs/KONEALGATUS.md) (Estonian) |
@@ -474,15 +512,18 @@ In the interest of honesty, this public copy contains **none of**:
 - Android signing keys;
 - the original project's Git history.
 
-**There is no prebuilt APK in this repository** — binaries do not
-belong in version control. You build the Android app with one command
-(`cd android && ./gradlew assembleDebug`, see
-[docs/ANDROID.md](docs/ANDROID.md)). If a release is ever published,
-the APK will be on the **Releases** page with its SHA-256 sum.
+**There are no binaries in the repository itself** — they do not
+belong in version control. The ready-made APK comes from the
+**[Releases](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest)**
+page, where it is built by GitHub Actions from the public source and
+signed with the project's persistent key. Building it yourself still
+works: `cd android && ./gradlew assembleDebug`, see
+[docs/ANDROID.md](docs/ANDROID.md).
 
-**No feature has been tested on a real phone** with this public copy.
-The code has been reviewed and the automated tests pass, but no
-physical-device verification has been done — don't treat it as proven.
+**This public build has not been tested on a real phone.** The original
+has run on a OnePlus 6 for months, but this particular APK has been
+reviewed and covered by automated tests, not tried on a physical device
+— don't treat it as proven.
 
 ---
 

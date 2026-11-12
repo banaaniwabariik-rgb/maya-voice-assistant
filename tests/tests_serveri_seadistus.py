@@ -29,6 +29,7 @@ testid: `android/app/src/test/java/com/maya/live/ServerConfigTest.kt`
 (`./gradlew testDebugUnitTest`).
 """
 
+import os
 import pathlib
 import re
 import subprocess
@@ -55,7 +56,13 @@ KOTLIN_FAILID = sorted(KOOD.glob("*.kt"))
 
 # Universaalne APK. Kui seda ei ole ehitatud, jäetakse APK testid vahele
 # (ja seda ÖELDAKSE välja – vahelejätmist ei tohi lugeda õnnestumiseks).
-UNIVERSAL_APK = JUUR / "valjalase/maya-universal.apk"
+#
+# MAYA_APK lubab osutada mõnele teisele failile. Väljalaskevoog annab
+# sellega ette just selle APK, mida ta avaldama hakkab – avaldatavat
+# binaari peab kontrollima tema ise, mitte mõni varem ehitatud koopia.
+UNIVERSAL_APK = (pathlib.Path(os.environ["MAYA_APK"]).resolve()
+                 if os.environ.get("MAYA_APK")
+                 else JUUR / "valjalase/maya-universal.apk")
 
 # =====================================================================
 # MIS ON „KEELATUD AADRESS"

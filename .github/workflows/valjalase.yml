@@ -1,0 +1,106 @@
+name: Väljalase (allkirjastatud APK)
+
+# Käivitub sildist kujul v1.2.3 või käsitsi (workflow_dispatch).
+#
+# MIKS ERALDI TÖÖVOOG: testide töövoog jookseb igal push'il ja PR-il,
+# sealhulgas fork'idest. Allkirjastamissaladused ei tohi fork'i PR-i
+# ehitusse sattuda, seepärast on allkirjastamine ainult siin ja ainult
+# sildi või käsitsi käivituse peal.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      silt:
+        description: "Versioon, nt v0.1.0-preview"
+        required: true
+
+permissions:
+  contents: write          # vajalik väljalaske loomiseks
+
+jobs:
+  apk:
+    name: Ehita ja avalda APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paigalda JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Tuvasta versioon
+        id: ver
+        run: |
+          SILT="${{ github.event.inputs.silt }}"
+          [ -z "$SILT" ] && SILT="${GITHUB_REF#refs/tags/}"
+          echo "silt=$SILT" >> "$GITHUB_OUTPUT"
+          # versionCode peab KASVAMA, muidu Android keeldub uuendamast.
+          # run_number kasvab monotoonselt ja ei sõltu sildi vormingust.
+          echo "kood=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Versioon: $SILT (versionCode ${{ github.run_number }})"
+
+      - name: Kontrolli, et allkirjastamissaladused on olemas
+        env:
+          KS: ${{ secrets.MAYA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::error::MAYA_KEYSTORE_BASE64 puudub. Allkirjastamata APK-d"
+            echo "::error::ei avaldata – kasutajad ei saaks hiljem uuendada."
+            exit 1
+          fi
+          echo "Saladused olemas."
+
+      - name: Ehita allkirjastatud release APK
+        working-directory: android
+        env:
+          # ILMA -PmayaDefaultBaseUrl liputa: avalik APK ei tohi ühtegi
+          # backendi aadressi sisaldada.
+          MAYA_KEYSTORE_BASE64: ${{ secrets.MAYA_KEYSTORE_BASE64 }}
+          MAYA_KEYSTORE_PASSWORD: ${{ secrets.MAYA_KEYSTORE_PASSWORD }}
+          MAYA_KEY_ALIAS: ${{ secrets.MAYA_KEY_ALIAS }}
+          MAYA_KEY_PASSWORD: ${{ secrets.MAYA_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon \
+            -PmayaVersionCode=${{ steps.ver.outputs.kood }} \
+            -PmayaVersionName=${{ steps.ver.outputs.silt }}
+
+      - name: Kinnita, et APK on PÄRISELT allkirjastatud
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "APK: $APK"
+          case "$APK" in
+            *unsigned*) echo "::error::APK on allkirjastamata"; exit 1;;
+          esac
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK"
+          # Sõrmejälg peab jääma väljalasete vahel SAMAKS – kasutaja saab
+          # seda ise võrrelda, enne kui uuenduse paigaldab.
+          "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK" \
+            | grep -i "SHA-256 digest" | head -1
+          # PÜSIV failinimi, et README link
+          # releases/latest/download/maya-android.apk ei vananeks kunagi.
+          # Versioon on näha väljalaske pealkirjas ja rakenduse sees.
+          mkdir -p valjund
+          cp "$APK" valjund/maya-android.apk
+          ls -l valjund/
+          sha256sum valjund/maya-android.apk
+
+      - name: Kontrolli, et APK-s ei ole backendi aadressi
+        run: python3 tests/tests_serveri_seadistus.py
+        env:
+          MAYA_APK: valjund/maya-android.apk
+
+      - name: Loo väljalase ja lisa APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.ver.outputs.silt }}" \
+            valjund/maya-android.apk \
+            --repo "${{ github.repository }}" \
+            --title "MAYA ${{ steps.ver.outputs.silt }} — varajane eelvaade" \
+            --notes-file .github/valjalase_markmed.md \
+            --prerelease

@@ -1138,9 +1138,11 @@ with any MAYA installation — you enter the address in the app. The app
 is **not** tied to any developer's server and never contacts anything
 other than your own backend.
 
-> **Not verified on a real phone.** This public build's APK has been
-> built and inspected byte by byte, but **no feature has been tested on
-> a physical device**. Don't treat it as proven.
+> **The original works; this build is unverified.** MAYA has run on a
+> OnePlus 6 for several months, and the demo video in the README comes
+> from that phone. This **public copy's** APK has been built and
+> inspected byte by byte, but **this particular build has not been
+> tested on a physical device**. Don't treat it as proven.
 
 ### 7.2 Installation
 

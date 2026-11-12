@@ -51,6 +51,43 @@ kõnejuhtimine.
 
 ---
 
+## Lae Android-rakendus alla
+
+<p align="center">
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest/download/maya-android.apk"><img alt="Lae APK alla" src="https://img.shields.io/badge/⬇%20Lae%20alla-maya--android.apk-2ea44f?style=for-the-badge"></a>
+  <br>
+  <sub><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest">kõik väljalasked ja SHA-256 summa</a> · Android 8.0+ · <strong>varajane eelvaade</strong></sub>
+</p>
+
+> ### ⚠️ Rakendus üksi ei tee midagi
+> MAYA aju elab **sinu enda serveris** ja kasutab **sinu enda Gemini API
+> võtit**. Ilma serverita näed ainult seadistusekraani. Serveri paned
+> püsti [paigaldusjuhendi](docs/PAIGALDAMINE.md) järgi — see võtab
+> umbes 15 minutit ja ei nõua programmeerimisoskust.
+
+**Kolm sammu:**
+
+| | |
+|---|---|
+| **1. Pane server püsti** | [paigaldusjuhend](docs/PAIGALDAMINE.md) või `./paigalda.sh`. Vajad **oma Gemini API võtit** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) — **Google arveldab selle sinule**, mitte MAYA projektile |
+| **2. Paigalda APK** | Android küsib luba „tundmatust allikast" paigaldamiseks. See on normaalne: APK ei tule Play poest |
+| **3. Ütle rakendusele serveri aadress** | Esimesel käivitusel küsib rakendus aadressi (nt `http://192.168.1.50:8000`). Vajuta **„Testi ühendust"** — rakendus ütleb ausalt, kas ühendus õnnestus. Aadressi saab hiljem seadistusekraanilt muuta |
+
+APK-s **ei ole ühtegi serveriaadressi ega API võtit** — võti jääb sinu
+serverisse. Seda kontrollib iga ehituse juures automaattest.
+
+**Allkirjast:** APK on allkirjastatud projekti **püsiva** võtmega, nii
+et järgmised väljalasked paigalduvad selle peale uuendusena, ilma et
+peaksid vana versiooni eemaldama.
+
+> **Aus hoiatus.** Originaal-MAYA on käinud OnePlus 6-l mitu kuud, aga
+> **seda avalikku ehitust ei ole keegi päris telefonis läbi testinud.**
+> Ta on baithaaval üle kontrollitud, kuid füüsilise seadme kinnitust ei
+> ole. Kui proovid, [ava issue](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/issues)
+> ja ütle, kas töötas — see on praegu kõige kasulikum panus.
+
+---
+
 ## Mis vahe on MAYA-l ja tavalisel AI-vestlusrobotil?
 
 Tavaline vestlusrobot **ootab, et sina alustaksid**. Sa avad äpi,
@@ -120,7 +157,7 @@ ilma ilustamata.
 | MAYA enda otsus vestluse ajal (`schedule_call` tööriist — „helista mulle 5 minuti pärast") | ⚙️ implementeeritud, mälus olev taimer (serveri taaskäivitus kustutab) |
 | Ajastatud meeldetuletus (sh korduv) | ✅ **otsast lõpuni kontrollitud** — kaks kasutajat, meeldetuletus samal ajal: kumbki sai AINULT oma kõneteate (päris server, päris autentimine, päris SSE) |
 | Kõne jõudmine **kõigisse** sama konto seadmetesse | ✅ fan-out, kaetud 6 testiga |
-| Androidi pool (helin, lukustuskuva, vastamine) | ⚙️ implementeeritud, **päris seadmes kontrollimata** |
+| Androidi pool (helin, lukustuskuva, vastamine) | ⚙️ implementeeritud. **Originaalis töötab OnePlus 6-l** (igapäevane kasutus mitu kuud, [demovideo](#maya-päriselt-töös--oneplus-6) on sealt). **Selle avaliku ehitusega** ei ole seda päris seadmes üle kontrollitud |
 
 ---
 
@@ -192,7 +229,7 @@ abi kõige rohkem loeb.
 
 | Probleem | Täpsem olukord |
 |---|---|
-| **Päris seadmes kontrollimata** | ükski funktsioon ei ole selle avaliku koopiaga **päris telefonis** läbi testitud |
+| **Avalik ehitus on päris seadmes kontrollimata** | MAYA ise **ei ole testimata**: originaalrakendus on käinud **OnePlus 6-l mitu kuud** ja [demovideo](#maya-päriselt-töös--oneplus-6) on sellelt telefonilt. Kontrollimata on **see avalik ehitus** — seda konkreetset APK-d ei ole keegi päris telefonis läbi testinud |
 | **`schedule_call` ei ela taaskäivitust üle** | taimer on mälus (`asyncio`), serveri taaskäivitus kustutab selle |
 | **HTTPS ei ole sisse ehitatud** | avalikus internetis on pöördproksi kohustuslik; dokumenteeritud, mitte automatiseeritud |
 | **Kõneteated käivad SSE kaudu, mitte FCM-i** | seetõttu on Androidi **akusäästu erand kohustuslik**; FCM-i analüüs on olemas [docs/KONEALGATUS.md](docs/KONEALGATUS.md) |
@@ -450,15 +487,17 @@ Aususe huvides — avalik koopia **ei sisalda**:
 - Androidi allkirjastamisvõtmeid;
 - algse projekti Git-ajalugu.
 
-**Valmis APK-d selles hoidlas ei ole** – binaarid ei kuulu
-versioonihaldusesse. Androidi rakenduse ehitad ise ühe käsuga
-(`cd android && ./gradlew assembleDebug`, vt
-[docs/ANDROID.md](docs/ANDROID.md)). Kui väljalase kunagi avaldatakse,
-tuleb APK **Releases** lehele koos SHA-256 summaga.
+**Hoidlas endas binaare ei ole** – need ei kuulu versioonihaldusesse.
+Valmis APK tuleb **[Releases](https://github.com/banaaniwabariik-rgb/maya-voice-assistant/releases/latest)**
+lehelt, kus ta ehitatakse GitHub Actionsis avalikust lähtekoodist ja
+allkirjastatakse projekti püsiva võtmega. Ise ehitamine on endiselt
+võimalik: `cd android && ./gradlew assembleDebug`, vt
+[docs/ANDROID.md](docs/ANDROID.md).
 
-**Ükski funktsioon ei ole selle avaliku koopiaga päris telefonis läbi
-testitud.** Kood on üle vaadatud ja automaattestid jooksevad, aga
-füüsilise seadme kontrolli ei ole tehtud – ära pea seda tõestatuks.
+**Seda avalikku ehitust ei ole päris telefonis läbi testitud.**
+Originaal on OnePlus 6-l mitu kuud käinud, aga see konkreetne APK on
+üle vaadatud ja automaattestidega kontrollitud, mitte füüsilises seadmes
+proovitud – ära pea seda tõestatuks.
 
 ---
 

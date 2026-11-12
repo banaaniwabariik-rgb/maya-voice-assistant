@@ -23,6 +23,27 @@ if (mayaDefaultBaseUrl.contains('"') || mayaDefaultBaseUrl.contains('\\')) {
     throw new GradleException("mayaDefaultBaseUrl sisaldab lubamatuid märke")
 }
 
+// =====================================================================
+// VÄLJALASKE ALLKIRI
+// =====================================================================
+// Androidis EI SAA rakendust uuendada, kui uus APK on allkirjastatud
+// teise võtmega: paigaldus kukub läbi veaga INSTALL_FAILED_UPDATE_
+// INCOMPATIBLE ja kasutaja peab vana versiooni käsitsi eemaldama – koos
+// kõigi seadetega. Seepärast PEAB allkirjastamisvõti olema püsiv.
+//
+// Võtit hoidlas EI OLE. See tuleb keskkonnamuutujatest, mille GitHub
+// Actions täidab hoidla saladustest (vt .github/workflows/valjalase.yml).
+//
+// Kui muutujaid ei ole – tavaline kloon, fork, PR-ehitus – jääb
+// signingConfig tekkimata ja `assembleRelease` annab ALLKIRJASTAMATA
+// APK. See kompileerub (nii ei kuku CI läbi inimesel, kellel saladusi
+// ei ole), aga seda ei saa telefoni paigaldada.
+def ksBase64 = System.getenv('MAYA_KEYSTORE_BASE64')
+def ksPass   = System.getenv('MAYA_KEYSTORE_PASSWORD')
+def ksAlias  = System.getenv('MAYA_KEY_ALIAS')
+def keyPass  = System.getenv('MAYA_KEY_PASSWORD')
+def saabAllkirjastada = ksBase64?.trim() && ksPass && ksAlias && keyPass
+
 android {
     namespace 'com.maya.live'
     compileSdk 34
@@ -31,12 +52,31 @@ android {
         applicationId "com.maya.live"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        // Androidi uuendus nõuab KASVAVAT versionCode'i. Väljalaskevoog
+        // annab need lipuga kaasa (-PmayaVersionCode=… sildi põhjal);
+        // tavaehitusel jääb 1.
+        versionCode (project.findProperty('mayaVersionCode') ?: '1').toString().toInteger()
+        versionName (project.findProperty('mayaVersionName') ?: '1.0').toString()
     }
 
     buildFeatures {
         buildConfig true
+    }
+
+    signingConfigs {
+        if (saabAllkirjastada) {
+            valjalase {
+                // Dekodeeritakse ehituse kausta, MITTE lähtekoodi.
+                // build/ on .gitignore'is, nii et võti ei saa commit'i sattuda.
+                def ksFail = layout.buildDirectory.file("maya-release.jks").get().asFile
+                ksFail.parentFile.mkdirs()
+                ksFail.bytes = ksBase64.trim().decodeBase64()
+                storeFile ksFail
+                storePassword ksPass
+                keyAlias ksAlias
+                keyPassword keyPass
+            }
+        }
     }
 
     buildTypes {
@@ -50,6 +90,9 @@ android {
             manifestPlaceholders = [appLabel: "Maya Live"]
             buildConfigField "boolean", "ENABLE_WATCHER", "true"
             buildConfigField "String", "MAYA_DEFAULT_BASE_URL", "\"${mayaDefaultBaseUrl}\""
+            if (saabAllkirjastada) {
+                signingConfig signingConfigs.valjalase
+            }
         }
         // KATSEVERSIOON: paigaldub PÄRIS äpi KÕRVALE eraldi rakendusena
         // (applicationId com.maya.live.lab). Nii saab uut kujundust proovida,

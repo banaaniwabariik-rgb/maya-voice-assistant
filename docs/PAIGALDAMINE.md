@@ -1118,9 +1118,11 @@ MAYA paigaldusega — aadressi sisestad rakenduses. Rakendus **ei ole**
 seotud ühegi arendaja serveriga ega võta ühendust kuhugi mujale kui
 sinu enda backendisse.
 
-> **Päris telefonis kontrollimata.** Selle avaliku koopia APK on
-> ehitatud ja sisu poolest üle kontrollitud, aga **ükski funktsioon ei
-> ole päris seadmes läbi testitud**. Ära pea seda tõestatuks.
+> **Originaal töötab, see ehitus on kontrollimata.** MAYA on käinud
+> OnePlus 6-l mitu kuud ja README demovideo on sellelt telefonilt. Selle
+> **avaliku koopia** APK on ehitatud ja sisu poolest üle kontrollitud,
+> aga **seda konkreetset ehitust ei ole päris seadmes läbi testitud**.
+> Ära pea seda tõestatuks.
 
 ### 7.2 Paigaldus
 

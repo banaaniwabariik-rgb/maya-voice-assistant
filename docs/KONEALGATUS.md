@@ -201,6 +201,8 @@ Sama muster teeks hiljem võimalikuks ka iOS-i APNs-i — vt
   Seadmehaldust (millisele telefonile helistada) ei ole.
 - **Akusäästu erand on kohustuslik.** Ilma selleta tapab Android
   teenuse ja kõne ei jõua kohale.
-- **Avalikus koopias EI OLE see päris seadmes läbi testitud.** Kood on
-  originaaliga sama, aga sinu telefon, Androidi versioon ja võrk on
-  erinevad. Vt README jaotist „Mis siin EI ole".
+- **Originaalis see töötab:** MAYA on käinud OnePlus 6-l mitu kuud ja
+  kõnealgatus on seal igapäevaselt kasutuses. **Avaliku ehitusega ei ole
+  seda päris seadmes üle kontrollitud.** Kood on originaaliga sama, aga
+  sinu telefon, Androidi versioon ja võrk on erinevad. Vt README jaotist
+  „Mis siin EI ole".

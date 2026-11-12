@@ -152,7 +152,7 @@ ega postitustesse sattuda enne, kui nad päriselt töötavad:
 | „helistab nagu päris telefonikõne" | **ei ole mobiilikõne** — tõuketeade serverist, mis avab rakenduses kõneekraani. Ei kasuta SIM-i, numbrit ega kõnelogi |
 | „eestikeelne mudel" | Gemini Live on **mitmekeelne** mudel; eesti keel tuleb eestikeelsetest viipadest |
 | „kalender" iseseisva funktsioonina | kalender on vaade meeldetuletuste peal; eraldi sündmusetabelit ega välist sünkroonimist ei ole |
-| „testitud päris telefonis" | **ükski funktsioon** ei ole selle avaliku koopiaga päris seadmes läbi testitud |
+| „see avalik ehitus on päris telefonis testitud" | originaal on OnePlus 6-l mitu kuud käinud, aga **seda avalikku ehitust** ei ole päris seadmes läbi testitud. Ära aja neid kahte segi — ja ära ütle ka vastupidist, nagu poleks MAYA kunagi telefonis töötanud |
 | „testitud Gemini Live'iga" | elutsükli testid kasutavad **jäljendatud** seanssi ja kella |
 | ekraanipildid, kasutajate arv, kiirusnumbrid, kogukonna suurus, tagasiside | **ei ole olemas** — ära leiuta |
 | „valmis APK allalaadimiseks" | binaare hoidlas ei ole; APK ehitatakse ise või tuleb Releases'i kaudu, kui väljalase tehakse |
