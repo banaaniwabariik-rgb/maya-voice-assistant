@@ -44,6 +44,17 @@ def ksAlias  = System.getenv('MAYA_KEY_ALIAS')
 def keyPass  = System.getenv('MAYA_KEY_PASSWORD')
 def saabAllkirjastada = ksBase64?.trim() && ksPass && ksAlias && keyPass
 
+// Arvutame väärtused SIIN, mitte android{} ploki sees.
+//
+// `versionCode (avaldis).toString().toInteger()` ei tee seda, mida ta
+// paistab tegevat: Groovy seob sulud meetodikutsega, nii et teisendus
+// rakendub versionCode'i TAGASTUSVÄÄRTUSELE ja setter saab Stringi.
+// Sama lugu on `layout`-iga signingConfigs ploki sees, kus delegaat ei
+// ole enam projekt.
+def mayaVersionCode = (project.findProperty('mayaVersionCode') ?: '1').toString().toInteger()
+def mayaVersionName = (project.findProperty('mayaVersionName') ?: '1.0').toString()
+def ksFail = project.layout.buildDirectory.file("maya-release.jks").get().asFile
+
 android {
     namespace 'com.maya.live'
     compileSdk 34
@@ -55,8 +66,8 @@ android {
         // Androidi uuendus nõuab KASVAVAT versionCode'i. Väljalaskevoog
         // annab need lipuga kaasa (-PmayaVersionCode=… sildi põhjal);
         // tavaehitusel jääb 1.
-        versionCode (project.findProperty('mayaVersionCode') ?: '1').toString().toInteger()
-        versionName (project.findProperty('mayaVersionName') ?: '1.0').toString()
+        versionCode mayaVersionCode
+        versionName mayaVersionName
     }
 
     buildFeatures {
@@ -68,7 +79,6 @@ android {
             valjalase {
                 // Dekodeeritakse ehituse kausta, MITTE lähtekoodi.
                 // build/ on .gitignore'is, nii et võti ei saa commit'i sattuda.
-                def ksFail = layout.buildDirectory.file("maya-release.jks").get().asFile
                 ksFail.parentFile.mkdirs()
                 ksFail.bytes = ksBase64.trim().decodeBase64()
                 storeFile ksFail
