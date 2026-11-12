@@ -40,8 +40,10 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Vaata demovideot (2 min 35 s)</a></strong><br>
-  <sub>Avaneb GitHubi videomängijas — pildil klõpsamine viib samale lehele</sub>
+  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Vaata demovideot (2 min 35 s, 17 MB)</a></strong><br>
+  <sub>Nupp ja pilt viivad videofaili lehele siinsamas hoidlas. GitHub ei esita
+  hoidlas olevat videot README sees, nii et brauser laeb faili alla ja avab
+  selle sinu enda mängijas.</sub>
 </p>
 
 See on **päris ekraanisalvestus** MAYA-st töötamas **OnePlus 6

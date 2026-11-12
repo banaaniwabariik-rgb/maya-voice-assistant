@@ -47,8 +47,10 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Watch the demo (2 min 35 s)</a></strong><br>
-  <sub>Opens in GitHub's video player — clicking the image goes to the same page</sub>
+  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Watch the demo (2 min 35 s, 17 MB)</a></strong><br>
+  <sub>The button and the image open the video file in this repository. GitHub does
+  not play repository-hosted video inside a README, so your browser will download
+  the file and open it in your own player.</sub>
 </p>
 
 This is a **real screen recording** of MAYA running on a **OnePlus 6
