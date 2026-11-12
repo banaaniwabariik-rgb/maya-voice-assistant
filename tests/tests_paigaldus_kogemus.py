@@ -272,6 +272,33 @@ class TestDokumentatsioonOnTosi(unittest.TestCase):
                     katki.append(f"{nimi} -> {siht}")
         self.assertEqual([], katki, f"katkised lingid: {katki}")
 
+    def test_34b_sisemised_ankrud_viitavad_olemasolevale_pealkirjale(self):
+        """`](#midagi)` peab viitama päris pealkirjale samas failis.
+
+        GitHub teeb ankru nii: väiketähed, mitte-sõnamärgid maha,
+        tühikud sidekriipsudeks. Emoji pealkirja ALGUSES jätab juhtiva
+        sidekriipsu ja muudab ankru mitmetähenduslikuks – seepärast ei
+        ole viidatud pealkirjades emojit.
+        """
+        def slug(rida: str) -> str:
+            # GitHubi reegel: väiketähed -> maha kõik, mis ei ole
+            # sõnamärk/tühik/sidekriips -> IGA tühik eraldi sidekriipsuks.
+            # Tühikuid EI tohi kokku suruda: „Variant 1 — Kodune võrk"
+            # annab emdashi eemaldamisel kaks tühikut ja seega KAKS
+            # sidekriipsu (`variant-1--kodune-võrk`).
+            t = rida.lstrip("#").strip().lower()
+            t = re.sub(r"[^\w\s-]", "", t, flags=re.UNICODE)
+            return re.sub(r"\s", "-", t)
+
+        katki = []
+        for nimi, sisu in self.md.items():
+            pealkirjad = {slug(r) for r in sisu.splitlines()
+                          if r.startswith("#")}
+            for m in re.finditer(r"\]\(#([^)]+)\)", sisu):
+                if m.group(1) not in pealkirjad:
+                    katki.append(f"{nimi} -> #{m.group(1)}")
+        self.assertEqual([], katki, f"katkised ankrud: {katki}")
+
     def test_35_ei_viidata_gitignore_failidele(self):
         """Kloonijal ei ole `valjalase/` kausta – link oleks katki."""
         for nimi, sisu in self.md.items():
@@ -411,10 +438,15 @@ class TestReadme(unittest.TestCase):
         self.en = loe("README_EN.md")
 
     def test_50_keelevalik_on_alguses(self):
-        """Keelevalik peab olema esimese 10 rea sees."""
+        """Keelevalik peab olema README päises.
+
+        Aken on 30 rida, sest päis on HTML-keskjoondusega plokk
+        (pealkiri, loosung, kirjeldus, keelelingid, märgid) — keelevalik
+        on seal visuaalselt kohe alguses, aga mitte esimesel 10 real.
+        """
         for nimi, sisu, teine in (("README.md", self.et, "README_EN.md"),
                                   ("README_EN.md", self.en, "README.md")):
-            algus = "\n".join(sisu.splitlines()[:10])
+            algus = "\n".join(sisu.splitlines()[:30])
             self.assertIn(teine, algus,
                           f"{nimi} alguses ei ole linki teisele keelele")
 

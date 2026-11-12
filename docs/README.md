@@ -60,6 +60,7 @@ the documentation, and MAYA's own user interface, are in Estonian.
 |---|---|
 | [ARENDUS.md](ARENDUS.md) | testid, kodeerimistavad, logiread, teadaolevad lahtised kohad |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | kuidas panustada ja mis litsentsi all panus sisse tuleb |
+| [GITHUB_ESITLUS.md](GITHUB_ESITLUS.md) | valmis tekstid GitHubi hoidla kirjelduse, loosungi ja teemade jaoks |
 | [../tests/README.md](../tests/README.md) | testikomplekti ülevaade |
 | [IOS.md](IOS.md) | iOS kui tuleviku platvorm — arhitektuursed kaalutlused |
 

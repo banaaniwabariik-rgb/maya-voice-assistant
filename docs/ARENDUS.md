@@ -116,6 +116,33 @@ faile ja sessioonifaile. **Jooksuta see enne iga pull request'i.**
 
 Head esimesed panused:
 
+- **⚠️ AJASTATUD MEELDETULETUS EI KÄIVITA KÕNET.** Kõige suurema mõjuga
+  lahtine viga. `background_reminder_watcher()` (`server/web_maya.py`)
+  jookseb taustaülesandena **ilma kasutajakontekstita**, seega
+  `config.connect()` avab **ühise** andmebaasi (`config.DB_TEE`). Iga
+  autenditud päring seevastu seab konteksti (`noua_kasutaja` →
+  `config.sea_aktiivne_kasutaja`), nii et kasutaja meeldetuletused
+  salvestuvad **kasutajapõhisesse** andmebaasi
+  (`data/users/<id>/reminders.db`). Valvur ei näe neid kunagi.
+
+  **Kontrollitud katseliselt (2026-11-12):** POST `/api/reminders`
+  minevikuajaga → kirje tekkis faili `data/users/1/reminders.db`,
+  `data/reminders.db` jäi tühjaks, valvur jooksis 12 s ja logis
+  **0** rida `[ANDROID CALL]`. Käsitsi käivitatud kõne
+  (`POST /api/trigger_call`) töötab ja jõuab SSE-voogu — ahela katkestus
+  on AINULT valvuri andmebaasivalikus.
+
+  Miks see märkamatuks jäi: ükski test ei kontrolli, kas valvur päriselt
+  käivitub. **Paranduse juurde kuulub test.** Parandades arvesta, et
+  valvur peab käima läbi KÕIGI kasutajate andmebaasid, mitte ainult
+  omaniku oma (`config.kasutaja_kaust` / `data/users/*`), ja et
+  kõneteade tuleb publitseerida õigele kasutajale — praegu langeb
+  `_KoneJarjekordProksi` taustaülesandes tagasi kasutajale #1.
+
+- **`schedule_call` ei ela serveri taaskäivitust üle.** Taimer on
+  `asyncio.create_task` + `asyncio.sleep` mälus. MAYA lubadus
+  „helistan 5 minuti pärast" kaob taaskäivitusel.
+
 - **Pöördproksi oma autentimine.** Klient saadab juba
   `Authorization: Bearer <token>` MAYA enda autentimise jaoks, nii et
   pöördproksi Basic-autentimine satuks sellega vastuollu. Kui tahad

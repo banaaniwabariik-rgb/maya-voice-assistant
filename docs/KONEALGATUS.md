@@ -1,5 +1,15 @@
 # Karakteri algatatud kõne
 
+> ### ⚠️ Praegune olek
+> **Käsitsi käivitatud kõne töötab** (`POST /api/trigger_call` →
+> SSE → telefon; kontrollitud otsast lõpuni).
+>
+> **Ajastatud meeldetuletuse kõne EI käivitu**: taustavalvur loeb ühist
+> andmebaasi, aga kasutaja meeldetuletused lähevad kasutajapõhisesse.
+> Täpne diagnoos ja parandamise juhis:
+> [ARENDUS.md → Teadaolevad lahtised kohad](ARENDUS.md#teadaolevad-lahtised-kohad).
+
+
 MAYA eristuv funktsioon: karakter helistab **ise** telefonile ja
 alustab vestlust. See ei ole teade „ava rakendus" — telefon heliseb,
 sa vastad ja Maya räägib kohe esimese lausega oma asja.

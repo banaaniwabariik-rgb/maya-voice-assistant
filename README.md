@@ -1,35 +1,188 @@
-# MAYA — eestikeelne häälassistent, kes helistab ise
+<h1 align="center">MAYA</h1>
 
-**🇪🇪 Eesti keeles (see fail)** · **[🇬🇧 In English](README_EN.md)**
+<p align="center">
+  <strong>Maya helistab sulle. Mitte vastupidi.</strong>
+</p>
 
-MAYA on eestikeelne reaalajas häälassistent. Ta ei ole nupuvajutusega
-küsimuste-vastuste masin: ta räägib loomuliku kõne rütmis, võtab
-vaikuse järel ise sõna, jätkab automaatselt lauset, mis pooleli jäi,
-ja **helistab sulle ise telefonile**, kui tal on midagi öelda.
+<p align="center">
+  Eestikeelne tehisintellekti kaaslane, kes räägib sinuga loomulikult,<br>
+  peab meeles sinu tegemisi ja tuletab olulisi asju meelde.
+</p>
 
-Häälemootor on **Google Gemini Live API** (natiivne heli, mitte
-kõnesüntees teksti pealt). Backend on Python/FastAPI, klient on
-Androidi rakendus.
+<p align="center">
+  <strong>🇪🇪 Eesti keeles (see fail)</strong> ·
+  <a href="README_EN.md">🇬🇧 In English</a> ·
+  <a href="docs/PAIGALDAMINE.md">📦 Paigaldusjuhend</a> ·
+  <a href="docs/README.md">📚 Dokumentatsioon</a>
+</p>
 
-> ### 🚀 Tahad kohe alustada?
-> **[→ ALUSTA SIIT: paigaldusjuhend](docs/PAIGALDAMINE.md)** —
-> või jooksuta `./paigalda.sh` ja skript juhendab sind samm-sammult.
->
-> Kolm teed on kirjeldatud allpool jaotises
-> [Paigaldamine](#paigaldamine).
+<p align="center">
+  <a href="LICENSE"><img alt="Litsents: Apache-2.0" src="https://img.shields.io/badge/litsents-Apache--2.0-blue"></a>
+  <img alt="Eesti keel" src="https://img.shields.io/badge/keel-eesti-success">
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-blue">
+  <img alt="Android 8+" src="https://img.shields.io/badge/android-8.0%2B-green">
+  <img alt="Self-hosted" src="https://img.shields.io/badge/majutus-sinu%20server-orange">
+</p>
 
-> **MAYA ei ole teenus.** Siin hoidlas on ainult lähtekood ja Androidi
-> rakendus — **ükski MAYA server siin ei jookse ja registreeruda ei
-> ole kuhugi**. Sina käivitad backendi oma arvutis või serveris, oma
-> Gemini API võtmega, ja telefon ühendub SINU serveriga. Rakendus küsib
-> selle aadressi esimesel käivitusel.
->
-> **See on avalik koopia.** Projekt sündis ühe inimese isikliku
-> assistendina ja on siia üle toodud nii, et kogu isiklik sisu,
-> võtmed, serveriaadressid ja vestlusajalugu on välja jäetud. Sa
-> paigaldad oma eksemplari, oma võtmetega ja oma karakteritega.
+<p align="center">
+  <strong>🚀 <a href="docs/PAIGALDAMINE.md">ALUSTA SIIT: paigaldusjuhend</a></strong><br>
+  <sub>või jooksuta <code>./paigalda.sh</code> — skript juhendab sind samm-sammult</sub>
+</p>
 
 ---
+
+## Mis vahe on MAYA-l ja tavalisel AI-vestlusrobotil?
+
+Tavaline vestlusrobot **ootab, et sina alustaksid**. Sa avad äpi,
+kirjutad küsimuse, saad vastuse, sulged äpi. Vestlus lõpeb seal, kus
+sina lahkud.
+
+MAYA töötab teistpidi:
+
+| | Tavaline AI-vestlusrobot | **MAYA** |
+|---|---|---|
+| Kes alustab | alati sina | **MAYA võtab ise ühendust** ja saadab telefonile kõnekutse |
+| Suhtlusviis | kirjutad ja loed | **räägid** — loomuliku kõne rütmis, katkestamine lubatud |
+| Vaikus vestluses | robot ootab lõputult | **MAYA võtab vaikuse järel ise sõna** |
+| Kui jutt katkeb | lause jääb pooleli | **jätkab ise samast kohast** |
+| Mäletamine | unustab vestluse lõppedes | **pikaajaline mälu** eesti keele käänetega otsinguga |
+| Iseloom | üks üldine assistent | **10 erineva iseloomu ja häälega karakterit** |
+| Keel | eesti keel on järelmõte | **eesti keel on lähtepunkt** — karakterid, viibad, liides, logid |
+| Kelle masinas | kellegi teise pilves | **sinu enda serveris, sinu enda API võtmega** |
+
+**MAYA ei ole veel üks ChatGPT-i ümbris.** Ta on eestikeelne
+häälkaaslane, kes elab sinu enda masinas ja võtab vestluses ise
+initsiatiivi.
+
+---
+
+## 📞 MAYA helistab sulle ise
+
+See on projekti süda, nii et siin on **täpselt**, kuidas see töötab —
+ilma ilustamata.
+
+```
+  SINU SERVER                                      SINU TELEFON
+  ───────────                                      ────────────
+  midagi juhtub                                    MAYA rakendus on
+  (meeldetuletus / taimer /                        taustal, hoiab lahti
+   MAYA enda otsus)                                SSE-ühendust
+        │                                                │
+        ├── sündmus → /api/call_events (SSE) ───────────►│
+        │                                                │
+        │                                    CallWatcherService
+        │                                    (esiplaanateenus + wake lock)
+        │                                                │
+        │                                                ▼
+        │                                    IncomingCallActivity
+        │                                    • süsteemi helin + vibratsioon
+        │                                    • ekraan ärkab, lukustuskuva peal
+        │                                    • „vasta" / „keeldu"
+        │                                                │
+        └──────── vastad → Gemini Live seanss avaneb ────┘
+                  MAYA alustab vestlust ESIMESENA
+```
+
+> ### ⚠️ Mis see EI ole
+> **See ei ole tavaline mobiilikõne.** MAYA ei helista läbi
+> telefonivõrgu, ei kasuta sinu numbrit ega SIM-kaarti ja kõne ei
+> paista kõnelogis. Tegemist on **sinu enda serverist tuleva
+> tõuketeatega**, mille peale rakendus avab telefonis kõneekraani, mis
+> näeb välja ja käitub nagu sissetulev kõne: heliseb, vibreerib ja
+> ilmub lukustuskuva peale. Kõne sisu liigub interneti kaudu sinu
+> serverisse, mitte mobiilioperaatori võrku.
+
+**Mis selle käivitab:**
+
+| Käivitaja | Olek |
+|---|---|
+| `POST /api/trigger_call` — käsitsi või skriptiga | ✅ **otsast lõpuni kontrollitud** (sündmus jõudis SSE-voogu, server logis seadme ühenduse) |
+| MAYA enda otsus vestluse ajal (`schedule_call` tööriist — „helista mulle 5 minuti pärast") | ⚙️ implementeeritud, mälus olev taimer (serveri taaskäivitus kustutab) |
+| Ajastatud meeldetuletus | ⚠️ **praegu KATKI** — vt [teadaolevad piirangud](#mis-ei-tööta-veel) |
+| Kõne jõudmine **kõigisse** sama konto seadmetesse | ✅ fan-out, kaetud 6 testiga |
+| Androidi pool (helin, lukustuskuva, vastamine) | ⚙️ implementeeritud, **päris seadmes kontrollimata** |
+
+---
+
+## Mida MAYA oskab
+
+Iga rida on koodis üle kontrollitud. Olekud: ✅ testitud ·
+⚙️ implementeeritud, aga mitte täielikult kontrollitud ·
+🧪 osaline / katseline · ⚠️ katki või puudu.
+
+### Hääl ja vestlus
+
+| | Olek | Mis täpselt |
+|---|---|---|
+| **Eestikeelne häälvestlus** | ⚙️ | Gemini Live natiivheli (`gemini-2.5-flash-native-audio-preview-12-2025`), ainult heliväljund. Eesti keel tuleb eestikeelsetest karakteriviipadest — **Gemini Live ise on mitmekeelne mudel, mitte eestikeelne mudel** |
+| **Katkestamine** | ✅ | sinu kõne katkestab MAYA kohe — VAD-i `START_OF_ACTIVITY_INTERRUPTS`, kaetud vestluse elutsükli testidega |
+| **Omaalgatus vaikuse järel** | ✅ | karakteripõhine paus, seejärel võtab MAYA ise sõna |
+| **Automaatne taaste** | ✅ | kui lause jääb pooleli, jätkab samast kohast ilma, et peaksid küsima |
+| **Kasutaja prioriteet** | ✅ | sinu kõne katkestab omaalgatuse, taaste ja pooleliolevad päringud |
+| **Hääletööriistad vestluse ajal** | ⚙️ | 10 tööriista: `add_reminder`, `get_reminders`, `schedule_call`, `recall_memory`, `set_user_name`, `get_weather`, `get_electricity_price`, `get_email_status`, `get_song_lyrics`, `get_last_turn_state` |
+
+> **Oluline täpsustus:** vestluse elutsükli testid (voorud, katkestused,
+> taaste, tühistamine — sadu teste) kasutavad **jäljendatud** Gemini
+> seanssi ja kella. Need tõestavad MAYA enda loogikat, **mitte** Gemini
+> Live'i käitumist. Päris Gemini teste komplektis ei ole, sest need
+> nõuaksid võtit ja maksaksid raha.
+
+### Karakterid ja mälu
+
+| | Olek | Mis täpselt |
+|---|---|---|
+| **10 karakterit** | ✅ | `asjalik`, `sõber`, `sarkastiline`, `romantiline`, `filosoof`, `mentor`, `treener`, `zen`, `laulja`, `kohandatud` — igaühel oma Gemini hääl (Kore / Aoede / Leda / Zephyr) ja oma algatustase |
+| **Kohandatud karakter** | ✅ | kirjutad ise juhise; testid tõestavad, et see **ei leki** ühegi teise karakteri viipasse |
+| **Pikaajaline mälu** | ✅ | FTS5-otsing, eesti keele morfoloogia (käänded), faktide eraldamine vestlusest |
+| **Mälu elutsükkel** | ✅ | duplikaadi tuvastus, vana fakti asendamine (`supersede`), vastuolu tuvastus, kindlusastmed — 18 testi |
+| **Mälu eraldatus karakterite vahel** | ✅ | privaatne / karakteripõhine / ühine ulatus — 58 + 49 testi |
+
+### Meeldetuletused ja kalender
+
+| | Olek | Mis täpselt |
+|---|---|---|
+| **Meeldetuletuste CRUD** | ⚙️ | `GET/POST/DELETE/PUT /api/reminders`, autenditud. Loomine kontrollitud päringuga |
+| **Loomine häälega** | ⚙️ | ütled vestluses ja MAYA salvestab ise (`add_reminder`) |
+| **Kordused** | ⚙️ | `none`, `daily`, `weekly`, `workdays` |
+| **Karakteripõhine esitus** | ⚙️ | meeldetuletuse loonud karakter esitab selle ka ette (nt lauljana loodud riimuv äratus) |
+| **Hommikubriifing** | ⚙️ | `notify_type=briefing` kogub andmed **helistamise hetkel**, mitte salvestamise ajal |
+| **Kalendrivaade** | 🧪 | kuu- ja nimekirjavaade (`calendar_module.js`), päevade kaupa, muuda/kustuta. **Eraldi kalendritabelit ei ole** — kalender on vaade meeldetuletuste peal |
+| **Ajastatud meeldetuletuse kõne** | ⚠️ | **ei käivitu** — vt allpool |
+
+### Android ja muu
+
+| | Olek | Mis täpselt |
+|---|---|---|
+| **Androidi rakendus** | ⚙️ | WebView + natiivne helitorustik, kõneekraan, esiplaanateenus, lähedusandur, Bluetooth/kõlari vahetus |
+| **Serveri aadress rakenduses** | ✅ | kasutaja sisestab ise, ühenduse test, 29 Kotlini testi puhtale loogikale |
+| **Mitu seadet / mitu kontot** | ✅ | kõneteade jõuab kõigisse sama konto seadmetesse; eri kontod on eraldatud |
+| **Kaamera** | ⚙️ | rakendus saadab kaadreid (768 px, ~1,5 s) live-seanssi ja MAYA kommenteerib nähtut |
+| **Autentimine** | ✅ | scrypt-paroolid, SHA-256 tokenirästid, **ühekordne WebSocketi pilet**, kasutajapõhine andmebaas, kiiruspiirang — 61 testi |
+| **Laulmine** | 🧪 | laulusõnade otsing, helistik ja tempo, rida-realt esitus — katseline |
+| **Veebi- ja failitööriistad** | ⚙️ | veebiotsing, lehtede ja PDF-ide lugemine, YouTube'i subtiitrid, e-posti olek |
+| **Kulujälgija** | ⚙️ | hinnanguline seansi maksumus serveri logis (**MAYA enda hinnang, mitte Google'i arve**) |
+
+---
+
+## Mis ei tööta veel
+
+Aus nimekiri. Kui see sind ei heiduta, vaata
+[Panustamine](#miks-tasub-panustada) — need on just need kohad, kus
+abi kõige rohkem loeb.
+
+| Probleem | Täpsem olukord |
+|---|---|
+| **Ajastatud meeldetuletus ei helista** | Taustavalvur loeb **ühist** andmebaasi, aga autenditud kasutaja meeldetuletused lähevad **kasutajapõhisesse** andmebaasi. Kontrollitud katseliselt: meeldetuletus salvestus faili `data/users/1/reminders.db`, valvur vaatas `data/reminders.db` ja kõnet ei tulnud. Käsitsi käivitatud kõne (`/api/trigger_call`) **töötab**. Üksi see parandus teeks kogu meeldetuletuste ahela töökorda |
+| **Päris seadmes kontrollimata** | ükski funktsioon ei ole selle avaliku koopiaga **päris telefonis** läbi testitud |
+| **`schedule_call` ei ela taaskäivitust üle** | taimer on mälus (`asyncio`), serveri taaskäivitus kustutab selle |
+| **HTTPS ei ole sisse ehitatud** | avalikus internetis on pöördproksi kohustuslik; dokumenteeritud, mitte automatiseeritud |
+| **Kõneteated käivad SSE kaudu, mitte FCM-i** | seetõttu on Androidi **akusäästu erand kohustuslik**; FCM-i analüüs on olemas [docs/KONEALGATUS.md](docs/KONEALGATUS.md) |
+| **iOS-i rakendust ei ole** | kaalutlused: [docs/IOS.md](docs/IOS.md) |
+| **Windows kontrollimata** | WSL2 peaks töötama, aga seda ei ole kontrollitud |
+| **Kalendril puudub väline sünkroonimine** | ei Google Calendar, ei CalDAV |
+
+---
+
 
 ## Kuidas see töötab
 
@@ -54,25 +207,32 @@ Androidi rakendus.
 sinu serveriga — mitte kunagi otse Google'iga. Sinu API võti ei lahku
 serverist.
 
----
-
-## Mida MAYA teeb
-
-| | |
+| Osa | Mida teeb |
 |---|---|
-| **Reaalajas häälvestlus** | Gemini Live natiivheli, eesti keel, katkestamine igal hetkel |
-| **Karakterid** | 10 eraldi iseloomu oma hääle ja temperamendiga; igaühel oma algatustase |
-| **Kohandatud karakter** | kirjutad ise juhise ja Maya võtab selle rolli |
-| **Autonoomne jätkamine** | pärast loomulikku pausi võtab Maya ise sõna, karakteripõhise ajastusega |
-| **Automaatne taaste** | kui lause jääb pooleli, jätkab ta samast kohast ilma, et peaksid küsima |
-| **Kasutaja prioriteet** | sinu kõne katkestab kõik — omaalgatuse, taaste, pooleliolevad päringud |
-| **Pikaajaline mälu** | faktide eraldamine vestlusest, FTS5-otsing, eesti keele morfoloogia |
-| **Karakteri algatatud kõne** | Maya helistab telefonile ja alustab vestlust ise |
-| **Meeldetuletused ja kalender** | korduvad meeldetuletused, mis saabuvad kõnena |
-| **Kaamera** | Maya näeb kaamerapilti ja kommenteerib seda |
-| **Laulmine** | laulusõnade otsing, helistik ja tempo, rida-realt esitus |
-| **Igapäevased tööriistad** | veebiotsing, lehtede ja PDF-ide lugemine, YouTube'i subtiitrid, e-post |
-| **Mitu kasutajat** | igal kasutajal oma konto ja oma eraldi andmebaas |
+| **Androidi rakendus** | mikrofon, kõlar, kaamera, kõneekraan. Ei räägi Google'iga otse |
+| **Backend** (`server/web_maya.py`, Python/FastAPI) | autentimine, mälu, meeldetuletused, tööriistad; vahendab heli Gemini Live'i |
+| **Gemini Live API** | tekitab hääle — natiivne heli, mitte kõnesüntees teksti pealt |
+| **SQLite** | mälu, meeldetuletused, kontod. **Igal kasutajal eraldi andmebaas** |
+| **WebSocket** `/ws/live_maya` | kahesuunaline heli reaalajas |
+| **SSE** `/api/call_events` | serveri algatatud kõneteated telefonile |
+
+### Self-hosted: sina oled ainus operaator
+
+> **MAYA ei ole teenus.** Siin hoidlas on ainult lähtekood ja Androidi
+> rakendus — **ükski MAYA server siin ei jookse ja registreeruda ei ole
+> kuhugi**. Sina käivitad backendi oma arvutis või serveris, oma Gemini
+> API võtmega, ja telefon ühendub SINU serveriga. Rakendus küsib selle
+> aadressi esimesel käivitusel.
+>
+> See tähendab ka: **MAYA projekt ei näe sinu vestlusi**, ei halda sinu
+> serverit ega pääse sinu andmetele ligi. Vestluse heli liigub sinu
+> serverist Google'i Gemini Live'i (seda ei saa vältida — see on hääle
+> allikas), aga mitte kellegi teise MAYA eksemplari.
+>
+> **See on avalik koopia.** Projekt sündis ühe inimese isikliku
+> assistendina ja on siia üle toodud nii, et kogu isiklik sisu, võtmed,
+> serveriaadressid ja vestlusajalugu on välja jäetud. Sa paigaldad oma
+> eksemplari, oma võtmetega ja oma karakteritega.
 
 ---
 
@@ -209,6 +369,7 @@ indeks. Kõige olulisem:
 | [docs/MITU_SEADET.md](docs/MITU_SEADET.md) | mitu telefoni ja mitu kontot |
 | [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md) | sõltuvused ja nende litsentsid |
 | [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, lahtised kohad |
+| [docs/GITHUB_ESITLUS.md](docs/GITHUB_ESITLUS.md) | GitHubi kirjeldus, loosung ja teemad — valmis tekstid |
 | [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada ja mis litsentsi all panus sisse tuleb |
 | [SECURITY.md](SECURITY.md) | turvaaukude teatamine, olemasolev kaitse ja piirangud |
@@ -314,14 +475,52 @@ kiidetud.
 
 ---
 
-## Panustamine
+## Miks tasub panustada
 
-Paranduste ja ettepanekute jaoks on pull request'id teretulnud —
-vt [CONTRIBUTING.md](CONTRIBUTING.md).
+**See ei ole idee ega tühi prototüüp.** Hoidlas on töötav süsteem:
+Python/FastAPI backend, Androidi rakendus, 10 karakterit, FTS5-mälu
+eesti keele morfoloogiaga, autentimine kasutajapõhise andmebaasiga,
+Gemini Live häälvoog koos katkestamise, omaalgatuse ja automaatse
+taastega — ja **702 Pythoni + 29 Kotlini testi**, mis jooksevad läbi.
 
-Panus tuleb sisse **Apache-2.0 all** (§5) ja **sina jääd oma koodi
-autoriõiguse omanikuks** — allkirjastatavat lepingut (CLA) ei nõuta.
-Täpsemalt: [CONTRIBUTING.md](CONTRIBUTING.md).
+Samal ajal on siin ausalt nimetatud [katkiseid ja poolikuid
+kohti](#mis-ei-tööta-veel). Just need on parimad kohad, kust alustada.
+
+### Kust alustada — päris ülesanded, mitte väljamõeldud
+
+| Raskus | Ülesanne | Miks see loeb |
+|---|---|---|
+| 🟢 **väike, suur mõju** | **Paranda ajastatud meeldetuletuse kõne.** Taustavalvur loeb ühist andmebaasi, kasutaja meeldetuletused on kasutajapõhises. Üks sihitud parandus taastab kogu meeldetuletuste ahela | kõige suurem võit vähima tööga kogu projektis |
+| 🟢 väike | **Testi katet meeldetuletuste valvurile.** Selle ahela katkemine jäi märkamatuks, sest ükski test ei kontrollinud, kas valvur päriselt käivitub | just see test oleks vea ära püüdnud |
+| 🟡 keskmine | **Tee `schedule_call` taaskäivitust üleelavaks** — praegu on taimer mälus | MAYA lubadus „helistan 5 minuti pärast" peab pidama ka pärast serveri taaskäivitust |
+| 🟡 keskmine | **Androidi funktsionaalsus**: akusäästu käitumine OEM-ide lõikes, kõneekraani viimistlus, helitee (Bluetooth, kuular, kõlar) | kõnefunktsioon seisab või kukub Androidi taustapiirangute taga |
+| 🟡 keskmine | **Mälu, meeldetuletused, kalender**: korduste reeglid (praegu 4 tüüpi), kalendrivaate parandused, väline sünkroonimine | kalender on praegu vaade meeldetuletuste peal, mitte päris kalender |
+| 🟡 keskmine | **Eestikeelse häälassistendi kvaliteet**: käänete ja arvude hääldus, lühendite normaliseerimine, kõnetuvastuse varutee | [TartuNLP `tts_preprocess_et`](https://github.com/TartuNLP/tts_preprocess_et) ja [estnltk](https://github.com/estnltk/estnltk) on olemas ja lubava litsentsiga |
+| 🟡 keskmine | **Uued karakterid** — iseloom, hääl, algatustase, mälu ulatus. Juhend: [docs/KARAKTERID.md](docs/KARAKTERID.md) | iga karakter on eraldi fail, testid hoiavad, et nad üksteisesse ei leki |
+| 🔴 suur | **iOS-i klient** — kaalutlused on juba kirjas [docs/IOS.md](docs/IOS.md) | praegu töötab ainult Android |
+| 🔴 suur | **HTTPS ja juurutus** — valmis pöördproksi retseptid, systemd, konteiner | avalikku internetti minek on praegu käsitöö |
+
+### Mis teeb panustamise siin mõnusaks
+
+- **Testid on olemas ja nad jooksevad.** `for f in tests/tests_*.py; do python3 "$f"; done` — 702 testi, 0 kukkunut. Sa näed kohe, kas midagi läks katki.
+- **Kood selgitab ennast.** Kommentaarid ütlevad **MIKS**, mitte mis: mitmes kohas on kirjas, mida mõõdeti, mis katki oli ja miks lahendus just selline on.
+- **Eesti keel on lähtepunkt**, mitte tõlge. Karakterid, viibad, liides, logid ja dokumentatsioon on eesti keeles.
+- **Litsents on selge**: Apache-2.0, CLA-d ei nõuta, **sina jääd oma koodi autoriõiguse omanikuks**.
+- **Ausus on reegel.** [CONTRIBUTING.md](CONTRIBUTING.md) ütleb välja: teste ei tohi nõrgendada selleks, et tulemus roheliseks saada, ja väide „see on katki" vajab tõendit — logirida, ajatemplit või numbrit.
+
+### Eestikeelne avatud lähtekood
+
+Eestikeelseid **töötavaid** häälassistente on vähe. Kui tahad, et
+eesti keeles saaks masinaga loomulikult rääkida, on see üks kohtadest,
+kus seda päriselt ehitatakse — ja kus üks sihitud pull request on kohe
+näha.
+
+**Alusta siit:** [CONTRIBUTING.md](CONTRIBUTING.md) ·
+[docs/ARENDUS.md](docs/ARENDUS.md) (testid, tavad, lahtised kohad) ·
+[docs/ARHITEKTUUR.md](docs/ARHITEKTUUR.md) (kuidas osad kokku käivad)
+
+Panus tuleb sisse **Apache-2.0 all** (§5) ja allkirjastatavat lepingut
+(CLA) ei nõuta.
 
 **Oluline märkus:** see avalik projekt on sõltumatu ja siin ei jookse
 ühtegi MAYA teenust. Ükski avalik panus **ei jõua automaatselt** ühegi
