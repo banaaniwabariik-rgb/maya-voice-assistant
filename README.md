@@ -31,6 +31,26 @@
 
 ---
 
+## Maya päriselt töös – OnePlus 6
+
+<p align="center">
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">
+    <img src="docs/media/maya-oneplus6-pisipilt.png" width="300" alt="MAYA töötamas OnePlus 6 telefonis – ekraanisalvestus">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Vaata demovideot (2 min 35 s)</a></strong><br>
+  <sub>Avaneb GitHubi videomängijas — pildil klõpsamine viib samale lehele</sub>
+</p>
+
+See on **päris ekraanisalvestus** MAYA-st töötamas **OnePlus 6
+Android-telefonis** — mitte animatsioon, mitte maketti ega
+järeltöödeldud demo. Videol on näha päris liides: hääle visualiseerija,
+karakteri vahetamine, reaalajas transkript ja kõnejuhtimine.
+
+---
+
 ## Mis vahe on MAYA-l ja tavalisel AI-vestlusrobotil?
 
 Tavaline vestlusrobot **ootab, et sina alustaksid**. Sa avad äpi,

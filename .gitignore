@@ -41,14 +41,24 @@ backups/
 backups_*/
 
 # Helifailid ja ajutised meediafailid
+# MÕTE: salvestused ja ekraanipildid tekivad arendades pidevalt ja
+# võivad sisaldada vestlusi, nimesid või aadresse. Siin on vaikimisi
+# KÕIK välistatud ja lubatud ainult nimeliselt – nii ei saa privaatne
+# salvestus kogemata commit'i sattuda.
 *.wav
 *.ogg
 *.mp3
 *.m4a
+*.mp4
+*.mov
 *.jpg
 *.jpeg
 *.png
 !android/app/src/main/res/**/*.png
+# ERAND: docs/media/ on projekti enda avalik meedia (demovideo ja selle
+# pisipilt). Siia käib AINULT teadlikult avalikuks mõeldud materjal.
+!docs/media/
+!docs/media/**
 downloads/
 tmp/
 

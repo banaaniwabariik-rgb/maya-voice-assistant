@@ -38,6 +38,29 @@
 
 ---
 
+## Maya in action – OnePlus 6
+
+<p align="center">
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">
+    <img src="docs/media/maya-oneplus6-pisipilt.png" width="300" alt="MAYA running on a OnePlus 6 – screen recording">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Watch the demo (2 min 35 s)</a></strong><br>
+  <sub>Opens in GitHub's video player — clicking the image goes to the same page</sub>
+</p>
+
+This is a **real screen recording** of MAYA running on a **OnePlus 6
+Android phone** — not an animation, a mockup or a post-produced demo.
+It shows the actual interface: the voice visualiser, switching
+characters, the live transcript and the call controls.
+
+> The recording is in Estonian, because that is the language MAYA
+> speaks. You can still see how it behaves without understanding it.
+
+---
+
 ## What makes MAYA different from an ordinary AI chatbot?
 
 An ordinary chatbot **waits for you to start**. You open an app, type a
