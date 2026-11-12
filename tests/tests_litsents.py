@@ -301,10 +301,29 @@ class TestHoidlaTerviklikkus(unittest.TestCase):
             self.assertIsNone(re.search(muster, log),
                               "git ajaloos on võtmemuster")
 
-    def test_44_kaugharusid_ei_ole(self):
-        """Avalikku hoidlat ei ole loodud ega midagi ei ole pushitud."""
-        self.assertEqual("", self._git("remote").strip(),
-                         "hoidlal on kaugharu – see peab jääma kohalikuks")
+    def test_44_kaugharu_on_oodatav_avalik_hoidla(self):
+        """Kui kaugharu on, peab see viitama OODATAVALE avalikule hoidlale.
+
+        AJALUGU: enne avaldamist nõudis see test, et kaugharu EI OLE –
+        nii ei saanud kogemata liiga vara avaldada. Projekt on nüüd
+        avaldatud, seega see nõue oleks alati punane. Kontroll jääb
+        siiski alles, aga teise sisuga: kaugharu tohib olla AINULT
+        selle projekti enda avalik hoidla. Nii tabab test ära, kui
+        keegi suunab `origin`-i kogemata võõrasse hoidlasse (nt
+        privaatsesse koopiasse või mõne teise konto alla).
+        """
+        read = self._git("remote", "-v").strip()
+        if not read:
+            return  # kaugharu puudub – kohalik koopia, igati korras
+        LUBATUD = "maya-voice-assistant"
+        for rida in read.splitlines():
+            if not rida.strip():
+                continue
+            url = rida.split()[1] if len(rida.split()) > 1 else ""
+            self.assertIn(LUBATUD, url,
+                          f"kaugharu viitab võõrasse hoidlasse: {url}")
+            self.assertNotIn("maya_projekti_kaust", url,
+                             "kaugharu viitab PRIVAATSELE originaalile")
 
     def test_45_originaalprojekti_ajalugu_ei_ole_imporditud(self):
         """Avalik koopia algab oma esimesest commit'ist."""

@@ -117,6 +117,14 @@ CREATE TABLE users (
             created_at    TEXT NOT NULL DEFAULT (datetime('now')),
             last_login_at TEXT
         );
+CREATE TABLE ws_tickets (
+            ticket_hash TEXT PRIMARY KEY,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at  INTEGER NOT NULL,
+            expires_at  INTEGER NOT NULL,
+            used_at     INTEGER
+        );
 CREATE INDEX idx_attempts ON login_attempts(username, at);
+CREATE INDEX idx_tickets_exp ON ws_tickets(expires_at);
 CREATE INDEX idx_tokens_user ON tokens(user_id);
 
