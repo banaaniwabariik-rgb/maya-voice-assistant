@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Vaata esmalt [docs/PAIGALDUS.md](../docs/PAIGALDUS.md) lõpus
+        Vaata esmalt [docs/PAIGALDAMINE.md](../docs/PAIGALDAMINE.md) lõpus
         olevat tõrkeotsingu tabelit.
 
         **ÄRA LISA VÕTMEID.** `python3 server/config.py` väljund on

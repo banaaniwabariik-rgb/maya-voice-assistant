@@ -155,6 +155,12 @@ live_router = APIRouter()
 import auth as _auth
 from fastapi import Depends as _Depends, Header as _Header
 from fastapi import HTTPException as _HTTPException
+# PARANDUS: `Request` oli allpool annotatsioonis kasutusel, aga jäi
+# importimata. Python 3.14 hindab annotatsioone laisalt (PEP 649), nii
+# et seal viga ei avaldunud – Python 3.11–3.13 aga hindab need kohe ja
+# `import web_maya` kukkus veaga `NameError: name 'Request' is not
+# defined`. Ilma selle impordita MAYA 3.13 peal EI KÄIVITU.
+from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials as _Cred
 from fastapi.security import HTTPBearer as _HTTPBearer
 

@@ -80,9 +80,11 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 APK asub: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-Kui sa ei taha ise ehitada, võta valmis APK hoidla **Releases**
-lehelt (vt [PAIGALDUS.md](PAIGALDUS.md)). GitHub levitab ainult
-lähtekoodi ja APK-d – **ükski MAYA server GitHubis ei jookse.**
+**Valmis APK-d hoidlas ei ole** – binaarid ei kuulu
+versioonihaldusesse. Kui väljalase on avaldatud, leiad APK hoidla
+**Releases** lehelt koos SHA-256 summaga; kontrolli summa alati üle.
+GitHub levitab ainult lähtekoodi ja APK-d – **ükski MAYA server
+GitHubis ei jookse.**
 
 ### Testid
 

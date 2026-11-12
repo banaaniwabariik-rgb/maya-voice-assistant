@@ -1,5 +1,7 @@
 # MAYA — eestikeelne häälassistent, kes helistab ise
 
+**🇪🇪 Eesti keeles (see fail)** · **[🇬🇧 In English](README_EN.md)**
+
 MAYA on eestikeelne reaalajas häälassistent. Ta ei ole nupuvajutusega
 küsimuste-vastuste masin: ta räägib loomuliku kõne rütmis, võtab
 vaikuse järel ise sõna, jätkab automaatselt lauset, mis pooleli jäi,
@@ -9,15 +11,48 @@ Häälemootor on **Google Gemini Live API** (natiivne heli, mitte
 kõnesüntees teksti pealt). Backend on Python/FastAPI, klient on
 Androidi rakendus.
 
+> ### 🚀 Tahad kohe alustada?
+> **[→ ALUSTA SIIT: paigaldusjuhend](docs/PAIGALDAMINE.md)** —
+> või jooksuta `./paigalda.sh` ja skript juhendab sind samm-sammult.
+>
+> Kolm teed on kirjeldatud allpool jaotises
+> [Paigaldamine](#paigaldamine).
+
+> **MAYA ei ole teenus.** Siin hoidlas on ainult lähtekood ja Androidi
+> rakendus — **ükski MAYA server siin ei jookse ja registreeruda ei
+> ole kuhugi**. Sina käivitad backendi oma arvutis või serveris, oma
+> Gemini API võtmega, ja telefon ühendub SINU serveriga. Rakendus küsib
+> selle aadressi esimesel käivitusel.
+>
 > **See on avalik koopia.** Projekt sündis ühe inimese isikliku
 > assistendina ja on siia üle toodud nii, et kogu isiklik sisu,
 > võtmed, serveriaadressid ja vestlusajalugu on välja jäetud. Sa
 > paigaldad oma eksemplari, oma võtmetega ja oma karakteritega.
->
-> **MAYA ei ole teenus.** GitHubis on ainult lähtekood ja Androidi
-> APK – ükski MAYA server siin ei jookse. Sina käivitad backendi oma
-> arvutis või serveris, oma Gemini API võtmega, ja telefon ühendub
-> SINU serveriga. Rakendus küsib selle aadressi esimesel käivitusel.
+
+---
+
+## Kuidas see töötab
+
+```
+   ANDROIDI TELEFON                      SINU SERVER                    GOOGLE
+┌────────────────────┐            ┌────────────────────────┐        ┌───────────┐
+│  MAYA rakendus     │            │  web_maya.py (FastAPI) │        │  Gemini   │
+│                    │  HTTP(S)   │                        │        │  Live API │
+│  mikrofon ────────────────────► │  /api/...   autentimine│        │  (natiiv- │
+│  kõlar    ◄──────────────────── │                        │        │   ne heli)│
+│                    │ WebSocket  │  /ws/live_maya ────────────────► │           │
+│  kaamera ─────────────────────► │     (hääl mõlemas suunas)       │           │
+│                    │            │                        │ ◄──────┤           │
+│  kõneteade ◄─────────────────── │  /api/call_events (SSE)│        └───────────┘
+└────────────────────┘            │                        │
+                                  │  SQLite: iga kasutajal │
+                                  │  OMA andmebaas         │
+                                  └────────────────────────┘
+```
+
+**Kogu liiklus käib ühe pordi (8000) kaudu** ja telefon räägib ainult
+sinu serveriga — mitte kunagi otse Google'iga. Sinu API võti ei lahku
+serverist.
 
 ---
 
@@ -41,49 +76,76 @@ Androidi rakendus.
 
 ---
 
-## Kiire algus
+## Paigaldamine
 
-**1. Backend tööle:**
+**Vali endale sobiv tee.** Kõik kolm viivad sama tulemuseni.
+
+| | Kellele | Kui kaua | Juhend |
+|---|---|---|---|
+| 🟢 **1. Lihtne** | kõigile, ka esimest korda | ~15 min | allpool + [docs/PAIGALDAMINE.md](docs/PAIGALDAMINE.md) |
+| 🤖 **2. AI abiga** | kui tahad, et keegi selgitaks ja vigu lahendaks | ~20 min | [docs/AI_ABIGA_PAIGALDAMINE.md](docs/AI_ABIGA_PAIGALDAMINE.md) |
+| 🔧 **3. Käsitsi** | kui tahad igast sammust aru saada | ~30 min | [docs/PAIGALDAMINE.md](docs/PAIGALDAMINE.md) |
+
+### 🟢 1. Lihtne paigaldus
+
+Vaja on **Python 3.11+** ([python.org](https://www.python.org/downloads/))
+ja **Gemini API võtit**
+([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
 
 ```bash
-git clone <sinu-repo-aadress> maya
+git clone <hoidla-aadress> maya
 cd maya
-
-python3 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r server/requirements.txt
-
-cp .env.example .env                 # täida GEMINI_API_KEY
-
-./kaivita.sh                         # kontrollib eeldused, loob
-                                     # andmebaasi ja käivitab serveri
+./paigalda.sh
 ```
 
-`kaivita.sh` ütleb välja aadressi, mille telefonis sisestad.
-Ainult aadressi küsimiseks: `./kaivita.sh --ip`
+`paigalda.sh` teeb ülejäänu ise ja küsib sinult kolme asja: kas
+jätkata, sinu API võti (**ekraanil seda ei kuvata**) ja kuidas telefon
+serverini jõuab. Ta **ei kirjuta üle** olemasolevat paigaldust, ei ava
+tulemüüri porte ega vii MAYA-t avalikku internetti.
 
-**2. Androidi rakendus telefoni** — võta `maya-universal.apk`
-**Releases** lehelt või ehita ise (`cd android && ./gradlew
-assembleDebug`). APK-s **ei ole ühtegi serveriaadressi** ega võtit,
-seega töötab see iga MAYA paigaldusega.
-
-**3. Serveri aadress rakenduses:** esimesel käivitusel tuleb
-seadistusekraan ette. Sisesta oma backendi aadress (nt
-`http://192.168.1.50:8000` – pane sinna OMA IP), vajuta **„Testi
-ühendust"** ja siis **„Salvesta ja jätka"**. Hiljem saab muuta:
-seaded → „Minu MAYA server".
-
-**4. Esimene konto** — **esimene konto saab admin-õigused**. Kõige
-lihtsam on seda teha telefonis („Loo uus konto"). Käsurealt:
+Seejärel:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/auth/register \
-     -H 'Content-Type: application/json' \
-     -d '{"username":"sinu_nimi","password":"vahemalt_10_margi_pikk_parool"}'
+./tervisekontroll.sh     # kontrolli, kas kõik on korras
+./kaivita.sh             # käivita MAYA
+./kaivita.sh --ip        # näita aadressi, mille telefonis sisestad
 ```
 
-Täielik juhend: **[docs/PAIGALDUS.md](docs/PAIGALDUS.md)** ·
-Androidi detailid: **[docs/ANDROID.md](docs/ANDROID.md)**
+**Telefonis:** paigalda Androidi rakendus → rakendus küsib esimesel
+käivitusel serveri aadressi → **„Testi ühendust"** → **„Loo uus
+konto"** (esimene konto saab admin-õigused) → räägi.
+
+> Androidi rakenduse ehitamine ja paigaldamine:
+> [docs/ANDROID.md](docs/ANDROID.md). APK-s **ei ole ühtegi
+> serveriaadressi ega võtit** — sama fail töötab iga MAYA
+> paigaldusega.
+
+### 🤖 2. Paigaldus AI-assistendi abiga
+
+Kui sa ei ole programmeerija, võib AI-kodeerimisassistent (nt
+[Claude Code](https://code.claude.com/docs/en/overview) või
+[VS Code](https://code.visualstudio.com/) AI-laiendusega) paigalduse
+sinu eest ära teha ja iga sammu lahti seletada.
+
+**[→ docs/AI_ABIGA_PAIGALDAMINE.md](docs/AI_ABIGA_PAIGALDAMINE.md)** —
+sisaldab valmis viipa, mille saad assistendile kleepida. Viip piirab
+teda nii, et ta ei lekita sinu võtit, ei ava tulemüüri ega juuruta
+midagi võõrasse serverisse.
+
+### 🔧 3. Käsitsi paigaldus
+
+Iga käsk lahti seletatud, koos võrgu-, turvalisuse- ja
+tõrkeotsingupeatükkidega:
+**[→ docs/PAIGALDAMINE.md](docs/PAIGALDAMINE.md)**
+(🇬🇧 [in English](docs/PAIGALDAMINE_EN.md))
+
+### Haldamine
+
+```bash
+./peata.sh               # peata server
+./uuenda.sh              # tõmba uus versioon + uuenda teegid ja skeem
+./tervisekontroll.sh     # diagnostika: paigaldus, seadistus, andmebaas, server, võrk
+```
 
 ---
 
@@ -92,41 +154,65 @@ Androidi detailid: **[docs/ANDROID.md](docs/ANDROID.md)**
 | | |
 |---|---|
 | **Google Gemini API võti** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Live API on tasuline — vt [docs/GEMINI_LIVE.md](docs/GEMINI_LIVE.md) |
-| **Python 3.11+** | testitud 3.13 ja 3.14 peal |
+| **Python 3.11+** | kontrollitud 3.13 ja 3.14 peal |
 | **Androidi telefon** | Android 8.0+ (API 26). Kõnefunktsioon vajab päris seadet |
-| **Server** | võib olla sinu arvuti, koduserver või pilv. Vt turvahoiatust allpool |
+| **Server** | sinu arvuti, koduserver või VPS. **Linux ja macOS on toetatud**; Windowsis kasuta [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) (kontrollimata) |
 
-**Gemini API võti jääb ainult serverisse.** Androidi rakendus ei näe
-seda kunagi: telefon räägib sinu backendiga, backend räägib
-Google'iga. Iga paigaldaja kasutab oma võtit ja maksab oma kasutuse
-eest.
+Riistvara: **2 GB RAM ja 2 GB vaba ketast on piisav.** Graafikakaarti
+ega kiiret protsessorit vaja ei ole — raske töö teeb Google'i pool.
 
 Valikuline: Groqi võti (tekstivestlus), Tavily (veebiotsing), Gmaili
-rakenduse parool (e-post).
+rakenduse parool (e-post). **Dockerit ei ole vaja** — vt
+[miks](docs/PAIGALDAMINE.md#miks-ei-ole-dockerit).
+
+### 💳 Gemini API võti ja kulud
+
+MAYA hääl tuleb **Google Gemini Live API-st** ja selleks on vaja SINU
+enda API võtit:
+
+1. Ava [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+   ja loo võti.
+2. **Gemini Live API on tasuline** ja nõuab tavaliselt arvelduse
+   sisselülitamist. Hinnakiri:
+   [aistudio.google.com/docs/pricing](https://aistudio.google.com/docs/pricing).
+3. **Arve läheb SINULE, mitte MAYA projektile.** Hinnad, tasuta
+   kvoodid ja arvelduse nõuded määrab Google ning need võivad muutuda —
+   selles hoidlas ei ole ühtegi hinnanumbrit, sest see vananeks.
+4. **Sea eelarveteade enne esimest vestlust:**
+   [console.cloud.google.com/billing/budgets](https://console.cloud.google.com/billing/budgets).
+
+**Võti jääb ainult serverisse.** Androidi rakendus ei näe seda kunagi:
+telefon räägib sinu backendiga, backend räägib Google'iga. Võti elab
+failis `.env`, mis on `.gitignore`-is.
+
+Dokumentatsioon: [ai.google.dev/gemini-api/docs](https://ai.google.dev/gemini-api/docs)
+· MAYA pool: [docs/GEMINI_LIVE.md](docs/GEMINI_LIVE.md)
 
 ---
 
 ## Dokumentatsioon
 
+**[→ docs/README.md](docs/README.md)** on täielik dokumentatsiooni
+indeks. Kõige olulisem:
+
 | Fail | Sisu |
 |---|---|
-| [docs/PAIGALDUS.md](docs/PAIGALDUS.md) | samm-sammult paigaldus nullist |
+| **[docs/PAIGALDAMINE.md](docs/PAIGALDAMINE.md)** | **täielik paigaldusjuhend algajale** (🇬🇧 [EN](docs/PAIGALDAMINE_EN.md)) |
+| **[docs/AI_ABIGA_PAIGALDAMINE.md](docs/AI_ABIGA_PAIGALDAMINE.md)** | paigaldus AI-assistendi abiga (🇬🇧 [EN](docs/AI_ASSISTED_INSTALLATION.md)) |
 | [docs/SEADISTAMINE.md](docs/SEADISTAMINE.md) | kõik keskkonnamuutujad ja seaded |
-| [docs/GEMINI_LIVE.md](docs/GEMINI_LIVE.md) | Gemini Live seadistus, mudel, hinnad |
 | [docs/ANDROID.md](docs/ANDROID.md) | Androidi rakenduse ehitamine ja ühendamine |
-| [docs/KONEALGATUS.md](docs/KONEALGATUS.md) | kuidas karakteri algatatud kõne töötab |
-| [docs/KARAKTERID.md](docs/KARAKTERID.md) | oma karakterite kirjutamine |
-| [docs/ARHITEKTUUR.md](docs/ARHITEKTUUR.md) | moodulid, vestluse elutsükkel, mälu |
+| [docs/GEMINI_LIVE.md](docs/GEMINI_LIVE.md) | Gemini Live seadistus, mudel, kulud |
 | [docs/TURVALISUS.md](docs/TURVALISUS.md) | autentimine, kasutajate eraldatus, mida kaitse katab |
-| [docs/MITU_SEADET.md](docs/MITU_SEADET.md) | mitu telefoni ja mitu kontot – oodatav käitumine |
-| [valjalase/PAIGALDA.md](valjalase/PAIGALDA.md) | **testimine päris telefonis: APK, käivitus, kontroll-nimekiri** |
+| [docs/ARHITEKTUUR.md](docs/ARHITEKTUUR.md) | moodulid, vestluse elutsükkel, mälu |
+| [docs/KARAKTERID.md](docs/KARAKTERID.md) | oma karakterite kirjutamine |
+| [docs/KONEALGATUS.md](docs/KONEALGATUS.md) | kuidas karakteri algatatud kõne töötab |
+| [docs/MITU_SEADET.md](docs/MITU_SEADET.md) | mitu telefoni ja mitu kontot |
 | [docs/SOLTUVUSED.md](docs/SOLTUVUSED.md) | sõltuvused ja nende litsentsid |
-| [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm – arhitektuursed kaalutlused |
-| [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, panustamine |
+| [docs/ARENDUS.md](docs/ARENDUS.md) | testid, kodeerimistavad, lahtised kohad |
+| [docs/IOS.md](docs/IOS.md) | iOS kui tuleviku platvorm |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | kuidas panustada ja mis litsentsi all panus sisse tuleb |
-| [SECURITY.md](SECURITY.md) | turvaaukude teatamine, olemasolev kaitse ja teadaolevad piirangud |
-| [LICENSE](LICENSE) | Apache License 2.0 täistekst |
-| [NOTICE](NOTICE) | autoriõiguse ja omistamise teade (Apache-2.0 §4d) |
+| [SECURITY.md](SECURITY.md) | turvaaukude teatamine, olemasolev kaitse ja piirangud |
+| [LICENSE](LICENSE) · [NOTICE](NOTICE) | Apache License 2.0 |
 
 ---
 
@@ -144,7 +230,7 @@ nõuded. Ära aja segi.
 | Registreerimine | `MAYA_ALLOW_REGISTRATION=1` | **`=0` või kutsekood** |
 | Pöördproksi | ei vaja | **nginx/Caddy TLS-iga** |
 | Käivitus | `./kaivita.sh` | systemd + pöördproksi |
-| Juhend | [valjalase/PAIGALDA.md](valjalase/PAIGALDA.md) | [docs/TURVALISUS.md](docs/TURVALISUS.md) |
+| Juhend | [docs/PAIGALDAMINE.md](docs/PAIGALDAMINE.md) | [docs/PAIGALDAMINE.md §5](docs/PAIGALDAMINE.md#variant-3--avalik-internet-domeen--https) |
 
 **Alusta kohalikust testimisest.** Avalikku internetti mine alles
 siis, kui HTTPS on paigas — vastasel juhul liigub sinu kõne, mälu ja
@@ -184,9 +270,15 @@ Aususe huvides — avalik koopia **ei sisalda**:
 - Androidi allkirjastamisvõtmeid;
 - algse projekti Git-ajalugu.
 
-Androidi APK on kaasas (**Releases** leht), aga **seda ei ole päris
-seadmes kontrollitud** – see on ehitatud ja sisu poolest üle
-kontrollitud, mitte telefonis läbi testitud. Soovi korral ehita ise.
+**Valmis APK-d selles hoidlas ei ole** – binaarid ei kuulu
+versioonihaldusesse. Androidi rakenduse ehitad ise ühe käsuga
+(`cd android && ./gradlew assembleDebug`, vt
+[docs/ANDROID.md](docs/ANDROID.md)). Kui väljalase kunagi avaldatakse,
+tuleb APK **Releases** lehele koos SHA-256 summaga.
+
+**Ükski funktsioon ei ole selle avaliku koopiaga päris telefonis läbi
+testitud.** Kood on üle vaadatud ja automaattestid jooksevad, aga
+füüsilise seadme kontrolli ei ole tehtud – ära pea seda tõestatuks.
 
 ---
 

@@ -60,6 +60,19 @@ jobs:
           cd server
           python -c "import web_maya; print('marsruute:', len(web_maya.app.routes))"
 
+      - name: Shelliskriptide süntaks
+        run: |
+          # bash -n leiab süntaksivead ka ridadel, kuhu test ei jõua.
+          # (Päris juhtum: kaivita.sh ei käivitunud varjestamata
+          #  jutumärgi tõttu, aga --ip haru lõpetas enne seda rea.)
+          vigu=0
+          for f in *.sh scripts/*.sh; do
+            echo "::group::$f"
+            bash -n "$f" || vigu=1
+            echo "::endgroup::"
+          done
+          exit $vigu
+
       - name: Testid
         env:
           MAYA_DATA_DIR: ${{ runner.temp }}/maya-data

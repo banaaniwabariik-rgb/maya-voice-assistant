@@ -2016,4 +2016,20 @@ async def options_reminders_handler():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # KUULAMISAADRESS TULEB SEADISTUSEST, MITTE KOODIST.
+    #
+    # PARANDUS: siin olid `host="0.0.0.0"` ja `port=8000` kõvakodeeritud,
+    # mistõttu `MAYA_HOST` ja `MAYA_PORT` EI MÕJUNUD millelegi. See oli
+    # turvaprobleem: dokumentatsioon soovitas kohtvõrgus piirduda
+    # aadressiga 127.0.0.1, aga server kuulas sellest hoolimata kõigil
+    # liidestel. Nüüd loetakse mõlemad `server/config.py` kaudu.
+    #
+    #   MAYA_HOST=0.0.0.0    -> kuulab kõigil liidestel (telefon pääseb ligi)
+    #   MAYA_HOST=127.0.0.1  -> kuulab AINULT selles arvutis
+    print(f"--> [MAYA]: kuulan aadressil {config.HOST}:{config.PORT}",
+          flush=True)
+    if config.HOST not in ("127.0.0.1", "localhost", "::1"):
+        print("--> [MAYA]: NB! Server on võrgust ligipääsetav. Avalikus "
+              "internetis kasuta HTTPS-i (vt docs/TURVALISUS.md).",
+              flush=True)
+    uvicorn.run(app, host=config.HOST, port=config.PORT)

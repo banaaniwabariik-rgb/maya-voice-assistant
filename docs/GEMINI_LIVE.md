@@ -46,17 +46,33 @@ sa siia seadistad.
 
 ## Hinnad
 
-Live API on **tasuline**. Praegu kehtiv arvestus koodis
-(`server/live_maya_ws.py`, klass `LiveCostTracker`):
+Live API on **tasuline** ja **arve läheb sinule, mitte MAYA
+projektile**.
+
+> ⚠️ **Siin dokumendis EI OLE hinnanumbreid ja see on tahtlik.**
+> Hinnad, tasuta kvoodid ja arvelduse nõuded määrab Google ning need
+> muutuvad. Iga siia kirjutatud number oleks mõne aja pärast vale ja
+> eksitaks sind kulude planeerimisel.
+>
+> **Kehtiv hinnakiri:** https://aistudio.google.com/docs/pricing
+
+Mida MAYA ise kulu kohta teab:
 
 | | |
 |---|---|
-| heli sisse | ~0,0046 $ / min |
-| heli välja | ~0,022 $ / min |
-| pilt (kaamerakaader) | 258 tokenit kaadri kohta ühe 768×768 ploki eest |
+| Kuluarvestuse kood | `server/live_maya_ws.py`, klass `LiveCostTracker` |
+| Mida ta arvestab | heli sisse (minutid), heli välja (minutid), pildikaadrid (tokenid) |
+| Pildi tokeniseerimine | **258 tokenit** ühe 768×768 ploki kohta |
+| Kus tulemust näeb | serveri logis seansi lõpus |
 
-Praktikas: ~5-minutine aktiivne vestlus kulus mõõdetult **0,04–0,065 €**.
-Kontrolli alati Google'i enda hinnakirja — need numbrid vananevad.
+**`LiveCostTracker` väljund on MAYA enda hinnang, mitte Google'i
+arve.** Tariifid on koodis konstandid, mis vananevad koos Google'i
+hinnakirjaga. Usalda arveldust **ainult** Google Cloudi konsoolis ja
+sea seal eelarveteade:
+https://console.cloud.google.com/billing/budgets
+
+Kulu suurusjärgu saad ise mõõta: pea üks lühike vestlus, vaata
+konsoolist tegelikku kulu ja korruta oma eeldatava kasutusega.
 
 > **Püstpaigutuses kaamerakaader** (nt 768×1024) ei mahu ühte 768×768
 > plokki ja läheb kahe eest kirja. Kulumudel koodis eeldab praegu ühte

@@ -86,3 +86,6 @@ Thumbs.db
 # Omaniku kohalik isikuandmete mustrinimekiri (privaatsustestide sisend).
 # EI TOHI hoidlasse jõuda – mustrid ise on isikuandmed.
 tests/privaatsed_mustrid.txt
+
+# Serveri PID-fail (./kaivita.sh kirjutab, ./peata.sh loeb).
+.maya.pid

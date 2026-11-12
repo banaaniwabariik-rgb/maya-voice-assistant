@@ -12,6 +12,7 @@
 # mis on .gitignore'is.
 set -uo pipefail
 cd "$(dirname "$0")"
+JUUR="$(pwd)"
 
 roheline() { printf '\033[32m%s\033[0m\n' "$1"; }
 kollane()  { printf '\033[33m%s\033[0m\n' "$1"; }
@@ -104,7 +105,8 @@ PY
 )
 if [ "$KONTOD" = "0" ]; then
     kollane "⚠ Kontosid ei ole. Esimene registreeruja saab admin-õigused."
-    echo "    Loo konto telefonis sisselogimisekraanil („Loo uus konto")"
+    # Jutumärgid peavad olema varjestatud, muidu on see bashi süntaksiviga.
+    echo "    Loo konto telefonis sisselogimisekraanil (\"Loo uus konto\")"
     echo "    või käsurealt pärast serveri käivitumist:"
     echo
     echo "    curl -X POST http://127.0.0.1:${MAYA_PORT:-8000}/api/auth/register \\"
@@ -145,8 +147,17 @@ echo
 roheline "Käivitan serveri (Ctrl+C lõpetab)…"
 echo
 
-# MAYA_HOST=0.0.0.0 on vajalik, et telefon ligi pääseks. Vaikeväärtus
-# config.py-s on juba 0.0.0.0, aga paneme selle siin selgelt välja.
-export MAYA_HOST="${MAYA_HOST:-0.0.0.0}"
+# KUULAMISAADRESS. Kui .env-is on MAYA_HOST seatud, loeb server selle
+# ise (server/config.py). Siin EI sunni me enam 0.0.0.0 peale, sest see
+# tühistaks kasutaja valiku „ainult see arvuti“ (127.0.0.1).
+if [ -n "${MAYA_HOST:-}" ]; then
+    export MAYA_HOST
+fi
+
+# PID-FAIL. `exec` asendab selle shelli Pythoni protsessiga, nii et $$
+# ON juba serveri tulevane PID. Nii teab ./peata.sh täpselt, keda
+# peatada, ja ei pea kunagi protsesse nime järgi ära arvama.
+echo $$ > "$JUUR/.maya.pid"
+
 cd server
 exec ../.venv/bin/python web_maya.py
