@@ -94,6 +94,30 @@ jobs:
         env:
           MAYA_APK: valjund/maya-android.apk
 
+      - name: Koosta väljalaske märkmed (koos sõrmejälgedega)
+        run: |
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          CERT=$("$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs \
+                 valjund/maya-android.apk | grep -i "certificate SHA-256 digest" \
+                 | head -1 | awk '{print $NF}')
+          APKSUM=$(sha256sum valjund/maya-android.apk | awk '{print $1}')
+          cp .github/valjalase_markmed.md markmed.md
+          {
+            echo
+            echo "---"
+            echo
+            echo "### Kontrollsummad"
+            echo
+            echo '| | |'
+            echo '|---|---|'
+            echo "| APK SHA-256 | \`$APKSUM\` |"
+            echo "| Allkirjastamissertifikaat SHA-256 | \`$CERT\` |"
+            echo "| versionCode | ${{ steps.ver.outputs.kood }} |"
+            echo
+            echo "Sertifikaadi sõrmejälg peab olema **igas väljalaskes sama**."
+            echo "Kui ta muutub, ÄRA paigalda – see ei ole sama võti."
+          } >> markmed.md
+
       - name: Loo väljalase ja lisa APK
         env:
           GH_TOKEN: ${{ github.token }}
@@ -102,5 +126,10 @@ jobs:
             valjund/maya-android.apk \
             --repo "${{ github.repository }}" \
             --title "MAYA ${{ steps.ver.outputs.silt }} — varajane eelvaade" \
-            --notes-file .github/valjalase_markmed.md \
-            --prerelease
+            --notes-file markmed.md \
+            --latest
+          # --prerelease MEELEGA EI ole kasutusel: GitHubi
+          # /releases/latest/download/... jätab eelväljalasked vahele ja
+          # annaks 404, nii et README püsilink oleks katki. „Varajane
+          # eelvaade" on kirjas pealkirjas, märkmetes ja mõlemas
+          # README-s – seal, kus inimene seda päriselt loeb.
