@@ -135,6 +135,97 @@ tier is usually enough. If the server is on the public internet, read
 sections [5](#5-network-ports-and-remote-access) and
 [6](#6-security-and-accounts) carefully.
 
+### Where to host the server
+
+Three sensible options. MAYA behaves identically on all three.
+
+| | Suits you if | Pros | Cons |
+|---|---|---|---|
+| **Your own computer at home** | you just want to try it | free, fastest to start | must stay on; remote access needs a VPN |
+| **A small VPS** | you want a cheap always-on server | cheap, simple | you administer it yourself |
+| **Google Cloud** (recommended if you choose a cloud) | you want an always-on server close to Estonia/Finland | nearest region, trial credit for new customers | **the free trial credit does NOT cover Gemini API** (see [section 3](#3-gemini-api-key-and-costs)) |
+
+> **An important distinction to get straight right away:** the server
+> and the Gemini API are **two separate bills**. The server is the
+> computer MAYA runs on; Gemini is the voice. Neither covers the other.
+> See [“What costs what”](#what-costs-what).
+
+### Google Cloud: recommended configuration
+
+If you pick Google Cloud, this is a sensible starting point:
+
+| Setting | Recommendation | Why this one |
+|---|---|---|
+| **Service** | Compute Engine (a virtual machine) | an ordinary Linux server, where MAYA runs like on any other machine. Not Cloud Run or App Engine — MAYA holds **long-lived WebSocket and SSE connections** and writes to a local SQLite file, which would not survive in a serverless container |
+| **Region** | **`europe-north1`** (Hamina, **Finland**) | per Google's documentation the closest region to Estonia → **lowest latency**, which matters most in a voice conversation. Google also flags this region as “low CO₂”. Zones: `europe-north1-a/-b/-c` |
+| **Machine** | **`e2-standard-2`** — 2 vCPUs, 8 GB RAM | **headroom, not a requirement.** MAYA's minimum is 2 GB RAM; 8 GB means SQLite, the Python process, a reverse proxy and system updates won't start competing with each other even with several users. `e2` is Google's cheapest general-purpose series |
+| **Operating system** | **Ubuntu 22.04 LTS** or **24.04 LTS** | LTS = long-term support, no frequent major upgrades. MAYA is **verified** on Linux and the installer scripts are bash scripts. Ubuntu's repositories carry Python 3.11+ |
+| **Disk** | **30–50 GB SSD** (balanced) | the OS plus the Python environment takes ~3–5 GB. The rest is for **your data and backups**: memory facts, the conversation archive and logs grow slowly but continuously. The 10 GB default fills up, and resizing later is more hassle than choosing right now |
+
+**Does it have to be exactly this?** No. MAYA also runs on an
+`e2-small` (2 GB RAM) with a 20 GB disk. `e2-standard-2` is the
+recommendation where you **don't have to think** about running out of
+resources. To start cheaper, pick a smaller machine — in Google Cloud
+you can change the machine type later (the instance must be stopped
+while you do).
+
+Official machine type and region lists:
+- Machine types: https://cloud.google.com/compute/docs/machine-resource
+- Regions and zones: https://cloud.google.com/compute/docs/regions-zones
+- Pricing calculator: https://cloud.google.com/products/calculator
+
+### The Google Cloud free trial
+
+Google offers **new customers** trial credit:
+
+- **$300 of credit, valid for 90 days** (Google's own wording: “$300 in
+  Welcome credit to spend over 90 days”).
+- Terms and activation: **https://cloud.google.com/free**
+
+**How to activate it:**
+
+1. Open https://cloud.google.com/free and click “Get started for free”.
+2. Sign in with a Google account and fill in your details. **A payment
+   card is required even for the trial** — Google uses it for identity
+   verification, but does not charge you within the credit during the
+   trial.
+3. Once you accept, you get a billing account with the credit attached.
+4. Google does **not** silently switch you to paid billing: after the
+   trial you have to choose “Activate full account” yourself. If you
+   don't, your resources are stopped.
+
+> ### ⚠️ The most important thing about this credit
+> **The $300 trial credit does NOT cover Gemini API usage.** Google
+> states this outright in its own documentation: *“The $300 credit
+> can't pay for Gemini API in AI Studio costs”*, and as of **March
+> 2026** Gemini API costs are **explicitly excluded** from the trial
+> credit programme.
+>
+> That means: the trial credit covers the **server** (Compute Engine,
+> disk, network), but **the voice must be paid for separately**. Two
+> separate bills, two separate places where cost accrues.
+>
+> Google has also published that for accounts starting **after 16
+> November 2026** the credit does not apply to Gemini platform services
+> at all. Because these terms change, **always check
+> [cloud.google.com/free](https://cloud.google.com/free)** rather than
+> relying on this guide.
+
+**What the trial credit covers for MAYA:**
+
+| | Covered by the $300 credit? |
+|---|---|
+| Compute Engine VM (`e2-standard-2`) | ✅ yes |
+| Persistent disk (30–50 GB SSD) | ✅ yes |
+| Network traffic | ✅ yes |
+| Static IP address | ✅ yes |
+| **Gemini API / AI Studio (MAYA's voice)** | ❌ **NO** |
+
+> Google Cloud's **Always Free** tier includes one `e2-micro` instance
+> per month — that is considerably smaller than `e2-standard-2` and
+> does not replace this recommendation. `e2-standard-2` usage is drawn
+> from the trial credit.
+
 ### Software
 
 **Required:**
@@ -172,6 +263,29 @@ works):
 
 ---
 
+### What costs what
+
+Four **separate** sources of cost. None of them covers another:
+
+| Cost | Who you pay | What it depends on | Official pricing |
+|---|---|---|---|
+| **1. Server rental** (monthly) | your cloud provider (e.g. Google Cloud) or VPS host | machine type, disk size, region. Runs **all the time**, even when you are not talking to MAYA | [Compute Engine pricing](https://cloud.google.com/compute/vm-instance-pricing) · [calculator](https://cloud.google.com/products/calculator) |
+| **2. Gemini API usage** | Google (AI Studio / Gemini API) | **conversation length** and token volume (audio in, audio out, camera frames). Accrues **only while you talk** | [Gemini pricing](https://aistudio.google.com/docs/pricing) |
+| **3. Domain** (optional) | your domain registrar | the TLD (`.ee`, `.com`, …), usually billed yearly | your registrar's price list |
+| **4. Backups** (optional) | your cloud provider | how much you keep and for how long | [GCP storage pricing](https://cloud.google.com/storage/pricing) |
+
+**The minimum you need:** item 1 (a server, or your own computer =
+free) plus item 2 (Gemini). A domain and backups are optional — you
+only need a domain for the public internet and HTTPS
+([option 3](#option-3--public-internet-domain--https)), and backups can
+go to your own computer for free ([section 6.3](#63-backups)).
+
+**This guide deliberately contains no price figures.** Prices, free
+quotas and billing requirements are set by Google and by service
+providers, and they change. Any number written here would go stale and
+mislead you when planning costs. **Always check the official links
+above.**
+
 ## 3. Gemini API key and costs
 
 ### What it is and why MAYA needs it
@@ -195,18 +309,72 @@ request and who gets billed. Without it MAYA **will not speak**.
 
 Documentation: **https://ai.google.dev/gemini-api/docs**
 
-### Billing
+### Can you get by on the free tier?
 
-**The Gemini Live API is a paid service** and using it normally requires
-billing to be enabled on the Google Cloud project.
+The Gemini API **does** have a free tier: limited access to certain
+models, free input and output tokens, and use of AI Studio.
 
-- Pricing: **https://aistudio.google.com/docs/pricing**
-- **Prices, free quotas and billing requirements are set by Google and
-  can change.** This guide deliberately contains no price figures,
-  because any number written here would go stale. **Always check
-  Google's own page.**
-- **The bill goes to you.** The MAYA project does not process payments,
-  takes no share of your usage, and is not responsible for your costs.
+**But for MAYA's voice, expect to need the paid tier.** MAYA uses the
+native-audio model **`gemini-2.5-flash-native-audio-preview-12-2025`**,
+and Google's pricing page lists native-audio Live API models under the
+**paid tier**. I checked this on the pricing page, but **check it
+yourself too** — this is exactly the sort of thing that changes:
+**https://aistudio.google.com/docs/pricing**
+
+Documented free-tier limitations worth knowing:
+
+| Limitation | What it means |
+|---|---|
+| **Content is used to improve Google's products** | on the free tier your content is also used as training material; on paid tiers this is explicitly excluded |
+| Lower rate limits | fewer requests per minute/day |
+| Some models and features are unavailable | including the **native-audio Live API** that MAYA needs |
+
+**Practical advice:** try your key on the free tier first. If MAYA
+answers in text but **no voice comes and the log shows an access or
+quota error**, this is the likely reason — enable billing.
+
+### Billing and the $5 minimum
+
+**The bill goes to you.** The MAYA project does not process payments,
+takes no share of your usage, and is not responsible for your costs.
+
+To enable billing, Google asks for a **minimum prepayment**. Google's
+own wording: *“Asked to prepay a minimum of \$5 to complete billing
+setup”* and *“The minimum purchase is \$5”* (or the local-currency
+equivalent where that applies).
+
+What that $5 **is** and **is not**:
+
+| | |
+|---|---|
+| ✅ **It IS** | **API credit** — a prepayment you then spend on requests. The money stays yours to use |
+| ❌ **It is NOT** | a monthly fee or subscription |
+| ❌ **It is NOT** | an activation or sign-up fee |
+| ❌ **It is NOT** | money that disappears if you don't use it |
+
+> **$5 does NOT equal any fixed number of conversation minutes.** Cost
+> depends on how long and how much you talk: **incoming audio, outgoing
+> audio and camera frames are all billed as tokens**. A long
+> conversation with the camera on costs many times more than a short
+> question. Nobody — including this guide — can promise you “$5 gets
+> you X minutes”. The only honest way to find out: have one short
+> conversation and look at the actual cost in Google's console.
+
+Official pages:
+- Billing and the minimum: **https://ai.google.dev/gemini-api/docs/billing**
+  (currently redirects to `aistudio.google.com/docs/billing`)
+- Pricing: **https://ai.google.dev/gemini-api/docs/pricing**
+  (currently redirects to `aistudio.google.com/docs/pricing`)
+- AI Studio (key, usage, billing): **https://aistudio.google.com/**
+
+> ⚠️ **The Google Cloud $300 trial credit does NOT cover the Gemini
+> API.** If you took the Google Cloud trial for the server, the voice
+> still has to be paid for separately — see
+> [section 2](#the-google-cloud-free-trial).
+
+**Prices, free quotas and billing requirements are set by Google and
+can change.** This guide contains no price figures other than Google's
+own documented $5 minimum. **Always check Google's own page.**
 
 ### Limiting spend
 
@@ -257,6 +425,70 @@ Terminal; Windows: a WSL2 window).
 
 Run commands **one at a time**: copy the line, paste it, press Enter,
 wait for it to finish. Don't copy the `$` — it just marks the prompt.
+
+### 4.0b Creating the server in Google Cloud (only if you have no server yet)
+
+**Skip this step** if MAYA will run on your own computer or you already
+have a VPS — continue from 4.1.
+
+The reasoning behind the configuration is in
+[section 2](#google-cloud-recommended-configuration). This is just the
+steps.
+
+**1. Create a project.** Open [console.cloud.google.com](https://console.cloud.google.com/)
+→ the project picker at the top → **“New project”** → give it a name
+(e.g. `maya`) → **“Create”**. A project is simply a folder your
+resources and bill live in.
+
+**2. Enable billing.** **Billing** in the left menu. You cannot create a
+VM without a billing account, not even with trial credit. Activating the
+trial: [section 2](#the-google-cloud-free-trial).
+
+**3. Enable the Compute Engine API.** Search for `Compute Engine` at the
+top → **“Compute Engine API”** → **“Enable”**. The first time takes a
+couple of minutes.
+
+**4. Create the VM.** **Compute Engine → VM instances → “Create
+instance”**. Fill in:
+
+| Field in the console | What to choose |
+|---|---|
+| **Name** | e.g. `maya-server` |
+| **Region** | **`europe-north1 (Finland)`** |
+| **Zone** | any (`europe-north1-b` is a fine default) |
+| **Machine configuration** | **General purpose → E2** |
+| **Machine type** | **`e2-standard-2` (2 vCPU, 8 GB memory)** |
+| **Boot disk → Change** | Operating system: **Ubuntu**, Version: **Ubuntu 22.04 LTS** or **24.04 LTS** (x86/64) |
+| **Boot disk → Size** | **30–50 GB**, type **Balanced persistent disk (SSD)** |
+| **Firewall** | **do NOT tick** “Allow HTTP traffic” or “Allow HTTPS traffic” — you only need those once you set up a reverse proxy ([option 3](#option-3--public-internet-domain--https)) |
+
+Click **“Create”**. The machine boots in about a minute.
+
+**5. Connect with browser SSH.** In the VM list, your machine's row has
+an **“SSH”** button → **“Open in browser window”**. A terminal opens
+right in the browser — **you do not need to create SSH keys or use the
+`ssh` command**. Google manages the keys for you.
+
+> **Why browser SSH is better for a beginner:** you don't have to open
+> port 22 to the public internet or manage private keys. See
+> [section 6.2 → SSH](#62-what-you-must-configure-yourself).
+
+**6. Prepare the machine.** In the browser terminal:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3 python3-venv python3-pip git curl
+```
+
+**7. Continue with the normal installation.** You are now on a Linux
+machine and everything below applies exactly as written: step
+[4.2](#42-download-maya) (download MAYA) and
+[4.3](#43-guided-installation-easiest) (`./paigalda.sh`).
+
+> **Note:** in Google Cloud **`ufw` alone is not enough.** On top of the
+> server's own firewall there is a **VPC firewall** at the cloud level.
+> If your phone needs to reach the server, the rule must be added in
+> **both** — see [section 5.3](#53-three-deployment-options).
 
 ### 4.1 Install Python
 
@@ -511,6 +743,21 @@ are network problems, not MAYA bugs.
 - the port is configurable with `MAYA_PORT`;
 - **you never need to open SSH or any other port for MAYA.**
 
+**So what is port 22 (SSH)?** SSH is how **you** get into the server to
+run commands. MAYA itself never uses it and your phone never touches
+it. Therefore:
+
+| | |
+|---|---|
+| In Google Cloud | use **browser SSH** ([step 4.0b](#40b-creating-the-server-in-google-cloud-only-if-you-have-no-server-yet)) — port 22 need not be open to the public internet |
+| On your own VPS | restrict SSH to **your own IP** or use a VPN; allow key-based login and disable passwords |
+| At home | you don't need SSH at all — you're sitting at the machine |
+
+> **Don't open port 22 to the whole internet.** SSH exposed to the
+> public internet receives constant automated login attempts. That is
+> not a MAYA problem but the server's own — except that your Gemini key
+> lives on that same machine.
+
 > **Ports 8001 and 8002** appear in the code for historical reasons
 > (the original installation ran separate helper services there).
 > **Those services do not exist in public MAYA** and you never need to
@@ -567,6 +814,34 @@ sudo firewall-cmd --reload
 macOS asks for permission on first start — answer **"Allow"**. If it got
 denied: `System Settings → Network → Firewall → Options…` and add
 `<project-folder>/.venv/bin/python3`.
+
+**In Google Cloud the firewall is in TWO places.** This is the most
+common place a beginner gets stuck: the `ufw` rule is there on the
+server, but the connection still doesn't get through.
+
+```
+phone  →  [1] VPC firewall (in Google's cloud)  →  [2] ufw (on the server)  →  MAYA
+```
+
+Adding the VPC rule in the console: **VPC network → Firewall → “Create
+firewall rule”**:
+
+| Field | Value |
+|---|---|
+| Name | `maya-8000` |
+| Direction | **Ingress** |
+| Targets | **All instances in the network** (or the tag you gave the VM) |
+| Source IPv4 ranges | **your own public IP** `/32` — not `0.0.0.0/0` |
+| Protocols and ports | **TCP**, port **`8000`** |
+
+Find your public IP with `curl -s ifconfig.me` or in a browser.
+
+> **`0.0.0.0/0` means “the whole internet”.** Don't use it on port
+> 8000, because then your MAYA is speaking unencrypted HTTP to the
+> public internet. If you want remote access there are two correct
+> routes: [Tailscale](#option-2--private-network--vpn-recommended)
+> (simpler, opens no ports) or
+> [a reverse proxy with HTTPS](#option-3--public-internet-domain--https).
 
 > `192.168.0.0/16` is an example of a typical home network. Yours may
 > differ (e.g. `10.0.0.0/8`). Check your own address with
@@ -688,6 +963,28 @@ not be the same.** Typically 443 is exposed and MAYA listens on 8000
 internally, with the reverse proxy between them. **Port 8000 is never
 forwarded directly.**
 
+**On a cloud server (e.g. Google Cloud) there is no router** — instead
+of port forwarding there is the VPC firewall. For the public internet:
+
+| Step | What to do |
+|---|---|
+| **1. Static IP** | VPC network → IP addresses → reserve a **static external IP** for the VM. The default ephemeral IP can change on restart, after which your domain no longer points at the server |
+| **2. VPC firewall** | allow **only** `tcp:443` (and `tcp:80`, which Let's Encrypt needs for certificate validation) from `0.0.0.0/0`. **Do NOT open port 8000** |
+| **3. DNS** | at your domain registrar create an **`A` record** pointing your domain (e.g. `maya.example.com`) at that static IP. Propagation usually takes minutes to hours |
+| **4. `.env`** | **`MAYA_HOST=127.0.0.1`** — so MAYA listens only inside the server and only the reverse proxy can reach it |
+| **5. Reverse proxy** | install Caddy (below) — it obtains the certificate itself |
+
+**What is DNS and why do you need it?** It is easier to type
+`https://maya.example.com` on a phone than an IP address, and **an
+HTTPS certificate is issued for a domain, not a bare IP**. That is why
+public-internet access always goes through a domain.
+
+**What are HTTPS and WSS?** `https://` is encrypted HTTP and `wss://`
+is an encrypted WebSocket. Both travel over **the same port 443**. MAYA
+derives `wss://` from your `https://` address automatically — you don't
+configure it separately. The reverse proxy only has to pass the
+`Upgrade` header through (the examples below do).
+
 ### 5.4 Summary
 
 | | Home network | VPN (Tailscale) | Public internet |
@@ -725,7 +1022,38 @@ forwarded directly.**
 | **Database backups** | MAYA does not back itself up (see below) |
 | **Database encryption** | SQLite is **plain text**; use an encrypted disk if that matters |
 | **API key protection** | `.env` permissions 600, restrict access to the server |
-| **The server itself** | system updates, strong SSH credentials, firewall |
+| **The server itself** | system updates, firewall, restricted SSH (see below) |
+
+#### SSH access must be restricted
+
+SSH is your own administrative access to the server. MAYA does not need
+it, but **your Gemini key and all user data live on that same
+machine** — so protecting SSH is part of protecting MAYA.
+
+| Situation | What to do |
+|---|---|
+| **Google Cloud** | use **browser SSH** ([step 4.0b](#40b-creating-the-server-in-google-cloud-only-if-you-have-no-server-yet)). Port 22 need not be open to the public internet and Google manages the keys |
+| **Your own VPS** | restrict SSH to **your own IP** in the firewall; allow **key-based** login only and **disable passwords** (`PasswordAuthentication no` in `/etc/ssh/sshd_config`, then `sudo systemctl restart ssh`) |
+| **Home server** | no need to expose SSH at all |
+
+> **Don't open port 22 to the whole internet** (`0.0.0.0/0`). SSH on
+> the public internet receives constant automated login attempts.
+
+#### The public internet requires HTTPS/WSS
+
+This is not a suggestion but a **requirement**. Without HTTPS the
+following travel in clear text:
+
+- your **speech audio** (`ws://` instead of `wss://`),
+- your **authentication token** (whoever captures it gets into your
+  MAYA),
+- your **memory facts** and reminder contents.
+
+The MAYA backend **does not speak HTTPS itself** — the encryption is
+done by the reverse proxy. Setup:
+[5.3 option 3](#option-3--public-internet-domain--https). Until HTTPS
+is in place, use your home network or
+[a VPN](#option-2--private-network--vpn-recommended).
 
 ### 6.3 Backups
 

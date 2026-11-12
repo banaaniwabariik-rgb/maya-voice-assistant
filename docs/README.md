@@ -27,7 +27,7 @@ the documentation, and MAYA's own user interface, are in Estonian.
 
 | Dokument | Sisu |
 |---|---|
-| [PAIGALDAMINE.md](PAIGALDAMINE.md) | **täielik paigaldusjuhend algajale** — eeldused, Gemini võti ja kulud, backend, võrk, turvalisus, Android, tõrkeotsing |
+| [PAIGALDAMINE.md](PAIGALDAMINE.md) | **täielik paigaldusjuhend algajale** — eeldused, **serveri valik (sh Google Cloud)**, Gemini võti ja kulud, backend, võrk, turvalisus, Android, tõrkeotsing |
 | [PAIGALDAMINE_EN.md](PAIGALDAMINE_EN.md) | the same guide in English |
 | [AI_ABIGA_PAIGALDAMINE.md](AI_ABIGA_PAIGALDAMINE.md) | paigaldus AI-kodeerimisassistendi abiga + valmis viip |
 | [AI_ASSISTED_INSTALLATION.md](AI_ASSISTED_INSTALLATION.md) | the same, in English |

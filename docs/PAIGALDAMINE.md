@@ -126,6 +126,95 @@ klass on tavaliselt piisav. Kui server on avalikus internetis, loe
 kindlasti peatükki [5](#5-võrk-pordid-ja-kaugligipääs) ja
 [6](#6-turvalisus-ja-kontod).
 
+### Kus serverit hoida
+
+Kolm mõistlikku valikut. MAYA töötab kõigil kolmel ühtemoodi.
+
+| | Sobib siis, kui | Plussid | Miinused |
+|---|---|---|---|
+| **Oma arvuti kodus** | tahad lihtsalt proovida | tasuta, kiire alustada | peab olema sees; kaugligipääs vajab VPN-i |
+| **Väike VPS** | tahad odavat püsivat serverit | odav, lihtne | pead ise haldama |
+| **Google Cloud** (soovitatud, kui pilve valid) | tahad püsivat serverit Soome lähedal | lähim regioon Eestile, uuele kliendile proovikrediit | **tasuta proovikrediit EI kata Gemini API-t** (vt [peatükk 3](#3-gemini-api-võti-ja-kulud)) |
+
+> **Oluline eristus, mida tasub kohe selgeks teha:** server ja Gemini
+> API on **kaks eraldi arvet**. Server on arvuti, kus MAYA jookseb;
+> Gemini on hääl. Üks ei kata teist. Vt
+> [„Mis kui palju maksab"](#mis-kui-palju-maksab).
+
+### Google Cloud: soovitatud konfiguratsioon
+
+Kui valid Google Cloudi, on see mõistlik lähtepunkt:
+
+| Säte | Soovitus | Miks just see |
+|---|---|---|
+| **Teenus** | Compute Engine (virtuaalmasin) | tavaline Linuxi server, millel MAYA jookseb nagu igal muul masinal. Mitte Cloud Run ega App Engine — MAYA hoiab **püsivaid WebSocket- ja SSE-ühendusi** ning kirjutab kohalikku SQLite faili, mis serverita konteineris ei püsiks |
+| **Regioon** | **`europe-north1`** (Hamina, **Soome**) | Google'i dokumentatsiooni järgi lähim regioon Eestile → **madalaim latents**, mis häälvestluses on kõige olulisem. Google märgib selle regiooni ka „low CO₂" sildiga. Tsoonid: `europe-north1-a/-b/-c` |
+| **Masin** | **`e2-standard-2`** — 2 vCPU, 8 GB RAM | **varu, mitte vajadus.** MAYA miinimum on 2 GB RAM; 8 GB tähendab, et SQLite, Pythoni protsess, pöördproksi ja süsteemiuuendused ei hakka üksteist segama ka siis, kui kasutajaid on mitu. `e2` on Google'i soodsaim üldotstarbeline seeria |
+| **Operatsioonisüsteem** | **Ubuntu 22.04 LTS** või **24.04 LTS** | LTS = pikaajaline tugi, ei vaja sagedast suurt uuendust. MAYA on Linuxil **kontrollitud** ja paigaldusskriptid on bash-skriptid. Ubuntu repos on Python 3.11+ olemas |
+| **Ketas** | **30–50 GB SSD** (balanced) | OS + Python keskkond võtab ~3–5 GB. Ülejäänu on **sinu andmetele ja varukoopiatele**: mälufaktid, vestlusarhiiv ja logid kasvavad aeglaselt, aga pidevalt. 10 GB vaikeketas saab otsa ja ketta suurendamine hiljem on tüütum kui kohe õige valimine |
+
+**Kas peab just nii olema?** Ei. MAYA jookseb ka `e2-small`-il
+(2 GB RAM) ja 20 GB kettal. `e2-standard-2` on soovitus, mille puhul
+sa **ei pea mõtlema**, kas ressurss sai otsa. Kui tahad odavamalt
+alustada, vali väiksem masin — Google Cloudis saab masinatüüpi hiljem
+muuta (masin tuleb selleks korraks seisata).
+
+Masinatüüpide ja regioonide ametlik nimekiri:
+- Masinatüübid: https://cloud.google.com/compute/docs/machine-resource
+- Regioonid ja tsoonid: https://cloud.google.com/compute/docs/regions-zones
+- Hinnakalkulaator: https://cloud.google.com/products/calculator
+
+### Google Cloudi tasuta prooviperiood
+
+Google pakub **uutele klientidele** proovikrediiti:
+
+- **$300 krediiti, kehtib 90 päeva** (Google'i enda sõnastus: „$300 in
+  Welcome credit to spend over 90 days").
+- Tingimused ja aktiveerimine: **https://cloud.google.com/free**
+
+**Kuidas aktiveerida:**
+
+1. Ava https://cloud.google.com/free ja vajuta „Get started for free".
+2. Logi sisse Google'i kontoga ja täida andmed. **Maksekaart on vaja
+   lisada ka proovi jaoks** — Google kontrollib isikut, aga
+   prooviperioodil ei võta krediidi piires raha.
+3. Pärast nõustumist tekib sul arveldus-konto koos krediidiga.
+4. Google **ei hakka automaatselt** tasulist arveldust peale: pärast
+   proovi lõppu tuleb sul endal „Activate full account" valida. Kui ei
+   vali, peatuvad ressursid.
+
+> ### ⚠️ Kõige tähtsam asi selle krediidi kohta
+> **$300 proovikrediit EI KATA Gemini API kasutust.** Google ütleb
+> selle oma dokumentatsioonis otse välja: *„The $300 credit can't pay
+> for Gemini API in AI Studio costs"*, ja alates **2026. aasta
+> märtsist** on Gemini API kulud proovikrediidi programmist
+> **selgesõnaliselt välja arvatud**.
+>
+> See tähendab: proovikrediit katab **serveri** (Compute Engine, ketas,
+> võrk), aga **hääl tuleb eraldi maksta**. Kaks eraldi arvet, kaks
+> eraldi kohta, kus kulu tekib.
+>
+> Google on avaldanud ka selle, et **pärast 16. novembrit 2026**
+> alustavatele kontodele ei kehti krediit Gemini platvormi teenustele
+> üldse. Kuna tingimused muutuvad, **kontrolli alati
+> [cloud.google.com/free](https://cloud.google.com/free) pealt** ja ära
+> tugine sellele juhendile.
+
+**Mida proovikrediit MAYA puhul katab:**
+
+| | Kas $300 krediit katab? |
+|---|---|
+| Compute Engine virtuaalmasin (`e2-standard-2`) | ✅ jah |
+| Püsiketas (30–50 GB SSD) | ✅ jah |
+| Võrguliiklus | ✅ jah |
+| Staatiline IP-aadress | ✅ jah |
+| **Gemini API / AI Studio (MAYA hääl)** | ❌ **EI** |
+
+> Google Cloudi **alaline tasuta tase** („Always Free") sisaldab ühe
+> `e2-micro` masina kuus — see on `e2-standard-2`-st tunduvalt väiksem
+> ja seda soovitust ei asenda. `e2-standard-2` kulu võetakse
+> proovikrediidist.
+
 ### Tarkvara
 
 **Kohustuslik:**
@@ -163,6 +252,29 @@ kujul):
 
 ---
 
+### Mis kui palju maksab
+
+Neli **eraldi** kuluallikat. Ükski neist ei kata teist:
+
+| Kuluallikas | Kellele maksad | Millest sõltub | Ametlik hind |
+|---|---|---|---|
+| **1. Serveri üür** (kuutasu) | pilveteenusele (nt Google Cloud) või VPS-i pakkujale | masinatüüp, ketta suurus, regioon. Jookseb **kogu aeg**, ka siis kui MAYA-ga ei räägi | [Compute Engine hinnad](https://cloud.google.com/compute/vm-instance-pricing) · [kalkulaator](https://cloud.google.com/products/calculator) |
+| **2. Gemini API kasutus** | Google'ile (AI Studio / Gemini API) | **vestluse pikkus** ja tokenite hulk (heli sisse, heli välja, kaamerakaadrid). Jookseb **ainult siis, kui räägid** | [Gemini hinnakiri](https://aistudio.google.com/docs/pricing) |
+| **3. Domeen** (valikuline) | domeeniregistripidajale | tippdomeen (`.ee`, `.com`, …), tavaliselt aastamaks | registripidaja hinnakiri |
+| **4. Varukoopiad** (valikuline) | pilveteenusele | kui palju ja kui kaua hoiad | [GCP salvestuse hinnad](https://cloud.google.com/storage/pricing) |
+
+**Mida sa vajad miinimumis:** punkt 1 (server, või oma arvuti = tasuta)
++ punkt 2 (Gemini). Domeen ja varukoopiad on valikulised — domeeni
+vajad ainult avaliku interneti ja HTTPS-i jaoks
+([variant 3](#variant-3--avalik-internet-domeen--https)), varukoopiad
+saab teha ka tasuta oma arvutisse ([peatükk 6.3](#63-varukoopia)).
+
+**Siin juhendis ei ole ühtegi hinnanumbrit ja see on tahtlik.** Hinnad,
+tasuta kvoodid ja arvelduse nõuded määravad Google ja teenusepakkujad
+ning need muutuvad. Iga siia kirjutatud number vananeks ja eksitaks
+sind kulude planeerimisel. **Vaata alati ülaltoodud ametlikke
+linke.**
+
 ## 3. Gemini API võti ja kulud
 
 ### Mis see on ja miks MAYA seda vajab
@@ -184,17 +296,73 @@ tegi ja kellele arve läheb. Ilma selleta MAYA **ei räägi**.
 
 Dokumentatsioon: **https://ai.google.dev/gemini-api/docs**
 
-### Arveldus
+### Kas tasuta tasemega saab hakkama?
 
-**Gemini Live API on tasuline** ja selle kasutamine nõuab tavaliselt,
-et Google Cloudi projektis oleks arveldus sisse lülitatud.
+Gemini API-l **on** tasuta tase: piiratud ligipääs osadele mudelitele,
+tasuta sisend- ja väljundtokenid ning AI Studio kasutus.
 
-- Hinnakiri: **https://aistudio.google.com/docs/pricing**
-- **Hinnad, tasuta kvoodid ja arvelduse nõuded määrab Google ning need
-  võivad muutuda.** Selles juhendis ei ole ühtegi hinnanumbrit, sest iga
-  siia kirjutatud number vananeks. **Vaata alati Google'i enda lehelt.**
-- **Arve läheb SINULE.** MAYA projekt ei vahenda makseid, ei saa sinu
-  kasutusest osa ega vastuta kulude eest.
+**Aga MAYA häälega arvesta paraku tasulise tasemega.** MAYA kasutab
+natiivheli mudelit **`gemini-2.5-flash-native-audio-preview-12-2025`**
+ja Google'i hinnakiri märgib natiivheli Live API mudelid **tasulise
+taseme** alla. Kontrollisin seda hinnakirjast, aga **kontrolli ka ise**
+— see on just see koht, mis muutub:
+**https://aistudio.google.com/docs/pricing**
+
+Tasuta taseme dokumenteeritud piirangud, mida tasub teada:
+
+| Piirang | Mida see tähendab |
+|---|---|
+| **Sisu kasutatakse toote parendamiseks** | tasuta tasemel läheb sinu sisu Google'ile ka õppematerjaliks; tasulisel tasemel on see välistatud |
+| Madalamad kiiruspiirangud | päringute arv minutis/ööpäevas on väiksem |
+| Osa mudeleid ja funktsioone ei ole saadaval | sh **natiivheli Live API**, mida MAYA vajab |
+
+**Praktiline soovitus:** proovi kõigepealt võtmega tasuta tasemel. Kui
+MAYA vastab tekstiga, aga **hääl ei tule ja logis on ligipääsu- või
+kvoodiviga**, on põhjus tõenäoliselt just see — lülita arveldus sisse.
+
+### Arveldus ja $5 miinimum
+
+**Arve läheb SINULE.** MAYA projekt ei vahenda makseid, ei saa sinu
+kasutusest osa ega vastuta kulude eest.
+
+Arvelduse sisselülitamiseks küsib Google **ettemaksu miinimumi**.
+Google'i enda sõnastus: *„Asked to prepay a minimum of \$5 to complete
+billing setup"* ja *„The minimum purchase is \$5"* (kohalikus valuutas
+vastav summa, kus see kehtib).
+
+Oluline, mida see **$5 ON ja MIS SEE EI OLE**:
+
+| | |
+|---|---|
+| ✅ **See ON** | **API krediit** — ettemaks, mille sa kulutad päringute peale. Raha jääb sinu kasutuseks |
+| ❌ **See EI OLE** | kuutasu ega tellimus |
+| ❌ **See EI OLE** | aktiveerimis- ega liitumistasu |
+| ❌ **See EI OLE** | summa, mis kaob kasutamata jätmisel |
+
+> **$5 EI tähenda mingit kindlat arvu vestlusminuteid.** Kulu sõltub
+> sellest, kui kaua ja kui palju sa räägid: arvestatakse **sisenevat
+> heli, väljuvat heli ja kaamerakaadreid tokenite kaupa**. Pikk vestlus
+> kaamera abil kulutab kordades rohkem kui lühike küsimus. Keegi — ka
+> mitte see juhend — ei saa sulle lubada „$5 eest saad X minutit".
+> Ainus aus viis teada saada: pea üks lühike vestlus ja vaata tegelikku
+> kulu Google'i konsoolist.
+
+Ametlikud lehed:
+- Arveldus ja miinimum: **https://ai.google.dev/gemini-api/docs/billing**
+  (suunab praegu aadressile `aistudio.google.com/docs/billing`)
+- Hinnakiri: **https://ai.google.dev/gemini-api/docs/pricing**
+  (suunab praegu aadressile `aistudio.google.com/docs/pricing`)
+- AI Studio (võti, kasutus, arveldus): **https://aistudio.google.com/**
+
+> ⚠️ **Google Cloudi $300 proovikrediit EI kata Gemini API-t.** Kui
+> võtsid serveri jaoks Google Cloudi prooviperioodi, siis hääle eest
+> tuleb ikkagi eraldi maksta — vt
+> [peatükk 2](#google-cloudi-tasuta-prooviperiood).
+
+**Hinnad, tasuta kvoodid ja arvelduse nõuded määrab Google ning need
+võivad muutuda.** Selles juhendis ei ole ühtegi hinnanumbrit peale
+Google'i enda dokumenteeritud $5 miinimumi. **Vaata alati Google'i enda
+lehelt.**
 
 ### Kulude piiramine
 
@@ -244,6 +412,70 @@ Windows: WSL2 aken).
 Käsud käivitatakse **ühekaupa**: kopeeri rida, kleebi terminali, vajuta
 Enter, oota kuni käsk lõpeb. `$` märki ära kopeeri — see tähistab
 lihtsalt käsurea algust.
+
+### 4.0b Serveri loomine Google Cloudis (ainult kui serverit veel ei ole)
+
+**Jäta see samm vahele**, kui MAYA jookseb sinu oma arvutis või sul on
+VPS juba olemas — jätka punktist 4.1.
+
+Konfiguratsiooni põhjendused on
+[peatükis 2](#google-cloud-soovitatud-konfiguratsioon). Siin on ainult
+sammud.
+
+**1. Loo projekt.** Ava [console.cloud.google.com](https://console.cloud.google.com/)
+→ ülal projektivalija → **„New project"** → anna nimi (nt `maya`) →
+**„Create"**. Projekt on lihtsalt kaust, mille sees sinu ressursid ja
+arve elavad.
+
+**2. Lülita arveldus sisse.** Vasakmenüüst **Billing**. Ilma
+arvelduskontota virtuaalmasinat luua ei saa, ka proovikrediidiga mitte.
+Prooviperioodi aktiveerimine: [peatükk 2](#google-cloudi-tasuta-prooviperiood).
+
+**3. Lülita Compute Engine API sisse.** Otsi ülalt otsingust
+`Compute Engine` → **„Compute Engine API"** → **„Enable"**. Esimene
+kord võtab paar minutit.
+
+**4. Loo virtuaalmasin.** **Compute Engine → VM instances → „Create
+instance"**. Täida:
+
+| Väli konsoolis | Mida valida |
+|---|---|
+| **Name** | nt `maya-server` |
+| **Region** | **`europe-north1 (Finland)`** |
+| **Zone** | ükskõik milline (`europe-north1-b` on hea vaikevalik) |
+| **Machine configuration** | **General purpose → E2** |
+| **Machine type** | **`e2-standard-2` (2 vCPU, 8 GB memory)** |
+| **Boot disk → Change** | Operating system: **Ubuntu**, Version: **Ubuntu 22.04 LTS** või **24.04 LTS** (x86/64) |
+| **Boot disk → Size** | **30–50 GB**, tüüp **Balanced persistent disk (SSD)** |
+| **Firewall** | **ÄRA märgi** „Allow HTTP traffic" ega „Allow HTTPS traffic" — neid on vaja alles siis, kui paned pöördproksi püsti ([variant 3](#variant-3--avalik-internet-domeen--https)) |
+
+Vajuta **„Create"**. Masin käivitub umbes minutiga.
+
+**5. Ühendu brauseri SSH-ga.** VM-ide nimekirjas on su masina real nupp
+**„SSH"** → **„Open in browser window"**. Avaneb terminal otse brauseris
+— **sa ei pea SSH-võtmeid tegema ega `ssh` käsku kasutama**. Google
+haldab võtmeid ise.
+
+> **Miks brauseri SSH on algajale parem:** sa ei pea avama porti 22
+> avalikule internetile ega haldama privaatvõtmeid. Vt
+> [peatükk 6.2 → SSH](#62-mida-pead-ise-seadistama).
+
+**6. Valmista masin ette.** Brauseri terminalis:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3 python3-venv python3-pip git curl
+```
+
+**7. Jätka tavalise paigaldusega.** Nüüd oled Linuxi masinas ja
+edasi käib kõik täpselt nagu allpool: punkt
+[4.2](#42-laadi-maya-alla) (laadi MAYA alla) ja
+[4.3](#43-juhendatud-paigaldus-lihtsaim) (`./paigalda.sh`).
+
+> **Pane tähele:** Google Cloudis **ei piisa `ufw`-st üksi.** Lisaks
+> serveri enda tulemüürile on ees **VPC tulemüür** Google'i pilve
+> tasemel. Kui telefon peab serverini jõudma, tuleb reegel lisada
+> **mõlemasse** — vt [peatükk 5.3](#53-kolm-paigaldusviisi).
 
 ### 4.1 Paigalda Python
 
@@ -500,6 +732,20 @@ võrguprobleemid, mitte MAYA vead.
 - Porti saab muuta muutujaga `MAYA_PORT`.
 - **SSH-i ega ükskõik millist muud porti MAYA jaoks avada ei ole vaja.**
 
+**Aga mis on port 22 (SSH)?** SSH on see, millega sa **ise** serverisse
+sisse saad, et käske anda. MAYA ise seda ei kasuta ja telefon ei
+puutu seda kunagi. Seepärast:
+
+| | |
+|---|---|
+| Google Cloudis | kasuta **brauseri SSH-d** ([punkt 4.0b](#40b-serveri-loomine-google-cloudis-ainult-kui-serverit-veel-ei-ole)) — porti 22 ei pea avalikule internetile avama |
+| Oma VPS-il | piira SSH **oma IP-le** või kasuta VPN-i; luba võtmega sisselogimine ja keela paroolid |
+| Kodus | SSH-d pole vaja üldse — istud masina taga |
+
+> **Ära ava porti 22 kogu internetile.** Avalikus internetis olev SSH
+> saab pidevalt automaatseid sisselogimiskatseid. See ei ole MAYA
+> probleem, vaid serveri oma — aga sinu Gemini võti elab samas masinas.
+
 > **Pordid 8001 ja 8002** esinevad koodis ajaloolistel põhjustel
 > (originaalpaigalduses jooksid seal eraldi abiteenused). **Avalikus
 > MAYA-s neid teenuseid ei ole** ja neid ei pea avama ega käivitama.
@@ -555,6 +801,34 @@ sudo firewall-cmd --reload
 macOS küsib esimesel käivitusel luba — vasta **„Luba"**. Kui jäi
 keelatuks: `Süsteemi sätted → Võrk → Tulemüür → Valikud…` ja lisa
 `<projektikaust>/.venv/bin/python3`.
+
+**Google Cloudis on tulemüür KAHES kohas.** See on kõige sagedasem
+koht, kus algaja kinni jääb: `ufw` reegel on serveris olemas, aga
+ühendus ei tule ikka läbi.
+
+```
+telefon  →  [1] VPC tulemüür (Google'i pilves)  →  [2] ufw (serveris)  →  MAYA
+```
+
+VPC reegli lisamine konsoolis: **VPC network → Firewall → „Create
+firewall rule"**:
+
+| Väli | Väärtus |
+|---|---|
+| Name | `maya-8000` |
+| Direction | **Ingress** |
+| Targets | **All instances in the network** (või silt, mille masinale panid) |
+| Source IPv4 ranges | **sinu enda avalik IP** `/32` — mitte `0.0.0.0/0` |
+| Protocols and ports | **TCP**, port **`8000`** |
+
+Oma avaliku IP leiad käsuga `curl -s ifconfig.me` või brauserist.
+
+> **`0.0.0.0/0` tähendab „kogu internet".** Ära kasuta seda pordil
+> 8000, sest siis räägib sinu MAYA krüpteerimata HTTP-ga avalikku
+> internetti. Kui tahad kaugligipääsu, on kaks õiget teed:
+> [Tailscale](#variant-2--privaatvõrk--vpn-soovitatud) (lihtsam,
+> porte ei avata) või
+> [pöördproksi + HTTPS](#variant-3--avalik-internet-domeen--https).
 
 > `192.168.0.0/16` on näide tüüpilise koduse võrgu kohta. Sinu võrk
 > võib olla teine (nt `10.0.0.0/8`). Kontrolli oma IP-d käsuga
@@ -673,6 +947,28 @@ olema samad.** Tüüpiliselt on väljas 443 (HTTPS) ja MAYA kuulab sees
 8000 — nende vahel on pöördproksi. **Porti 8000 ei suunata kunagi
 otse välja.**
 
+**Pilveserveris (nt Google Cloud) ruuterit ei ole** — pordisuunamise
+asemel on VPC tulemüür. Avaliku interneti jaoks:
+
+| Samm | Mida teha |
+|---|---|
+| **1. Staatiline IP** | VPC network → IP addresses → reserveeri masinale **staatiline väline IP**. Vaikimisi antud IP võib taaskäivitusel muutuda ja siis domeen enam ei osuta serverile |
+| **2. VPC tulemüür** | luba **ainult** `tcp:443` (ja `tcp:80`, mida Let's Encrypt vajab sertifikaadi kinnitamiseks) allikaga `0.0.0.0/0`. **Porti 8000 EI avata** |
+| **3. DNS** | domeeniregistripidaja juures tee **`A`-kirje**, mis osutab sinu domeeni (nt `maya.example.com`) sellele staatilisele IP-le. Muudatus levib tavaliselt minutitest tundideni |
+| **4. `.env`** | **`MAYA_HOST=127.0.0.1`** — nii kuulab MAYA ainult serveri sees ja ainult pöördproksi pääseb ligi |
+| **5. Pöördproksi** | paigalda Caddy (allpool) — ta hangib sertifikaadi ise |
+
+**Mis on DNS ja miks seda vaja on?** Telefonis on mugavam sisestada
+`https://maya.example.com` kui IP-aadressi, ja **HTTPS-sertifikaati
+antakse domeenile, mitte paljale IP-le**. Seepärast käib avalik
+internet alati domeeni kaudu.
+
+**Mis on HTTPS ja WSS?** `https://` on krüpteeritud HTTP ja `wss://` on
+krüpteeritud WebSocket. Mõlemad käivad **sama pordi 443** kaudu. MAYA
+tuletab `wss://` ise `https://` aadressist — sa ei pea seda eraldi
+seadistama. Pöördproksi peab lihtsalt `Upgrade` päise edasi andma
+(allolevad näited teevad seda).
+
 ### 5.4 Kokkuvõte
 
 | | Kodune võrk | VPN (Tailscale) | Avalik internet |
@@ -710,7 +1006,35 @@ otse välja.**
 | **Andmebaasi varukoopia** | MAYA ei tee varukoopiaid ise (vt allpool) |
 | **Andmebaasi krüpteerimine** | SQLite on **tavatekstina**; kui see on oluline, kasuta krüpteeritud ketast |
 | **API võtme kaitse** | `.env` õigused 600, serveri ligipääsu piiramine |
-| **Serveri enda turvalisus** | süsteemiuuendused, tugev SSH-parool/võti, tulemüür |
+| **Serveri enda turvalisus** | süsteemiuuendused, tulemüür, piiratud SSH (vt allpool) |
+
+#### SSH ligipääs tuleb piirata
+
+SSH on sinu enda haldusligipääs serverisse. MAYA seda ei vaja, aga
+**sinu Gemini võti ja kõik kasutajate andmed elavad samas masinas** —
+seega on SSH kaitsmine osa MAYA turvalisusest.
+
+| Olukord | Mida teha |
+|---|---|
+| **Google Cloud** | kasuta **brauseri SSH-d** ([punkt 4.0b](#40b-serveri-loomine-google-cloudis-ainult-kui-serverit-veel-ei-ole)). Porti 22 ei pea avalikule internetile avama ja võtmeid haldab Google |
+| **Oma VPS** | piira SSH **oma IP-le** tulemüüris; luba ainult **võtmega** sisselogimine ja **keela paroolid** (`PasswordAuthentication no` failis `/etc/ssh/sshd_config`, siis `sudo systemctl restart ssh`) |
+| **Kodune server** | SSH-d pole vaja avada üldse |
+
+> **Ära ava porti 22 kogu internetile** (`0.0.0.0/0`). Avalikus
+> internetis olev SSH saab pidevalt automaatseid sisselogimiskatseid.
+
+#### Avalik internet nõuab HTTPS/WSS-i
+
+See ei ole soovitus, vaid **nõue**. Ilma HTTPS-ita liiguvad avatekstina:
+
+- sinu **kõne heli** (WebSocket `ws://` asemel `wss://`),
+- **autentimistoken** (kes selle kätte saab, pääseb sinu MAYA-sse),
+- **mälufaktid** ja meeldetuletuste sisu.
+
+MAYA backend **ise ei räägi HTTPS-i** — krüpteerimise teeb pöördproksi.
+Seadistus: [5.3 variant 3](#variant-3--avalik-internet-domeen--https).
+Kuni HTTPS-i ei ole, kasuta kodust võrku või
+[VPN-i](#variant-2--privaatvõrk--vpn-soovitatud).
 
 ### 6.3 Varukoopia
 
