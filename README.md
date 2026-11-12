@@ -34,22 +34,20 @@
 ## Maya päriselt töös – OnePlus 6
 
 <p align="center">
-  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">
-    <img src="docs/media/maya-oneplus6-pisipilt.png" width="300" alt="MAYA töötamas OnePlus 6 telefonis – ekraanisalvestus">
-  </a>
+  <img src="docs/media/maya-oneplus6-demo.webp" width="320" alt="MAYA töötamas OnePlus 6 telefonis – katkend ekraanisalvestusest">
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Vaata demovideot (2 min 35 s, 17 MB)</a></strong><br>
-  <sub>Nupp ja pilt viivad videofaili lehele siinsamas hoidlas. GitHub ei esita
-  hoidlas olevat videot README sees, nii et brauser laeb faili alla ja avab
-  selle sinu enda mängijas.</sub>
+  <sub><strong>Mängib siinsamas</strong> — 24-sekundiline katkend, kordub, <strong>helita</strong>.<br>
+  Täispikk salvestus koos heliga (2 min 35 s, 17 MB):
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">maya-oneplus6.mp4</a></sub>
 </p>
 
 See on **päris ekraanisalvestus** MAYA-st töötamas **OnePlus 6
-Android-telefonis** — mitte animatsioon, mitte maketti ega
-järeltöödeldud demo. Videol on näha päris liides: hääle visualiseerija,
-karakteri vahetamine, reaalajas transkript ja kõnejuhtimine.
+Android-telefonis** — mitte makett ega järeltöödeldud demo, vaid
+telefoni ekraan nii, nagu see on. Näha on päris liides: hääle
+visualiseerija, karakteri vahetamine, reaalajas transkript ja
+kõnejuhtimine.
 
 ---
 

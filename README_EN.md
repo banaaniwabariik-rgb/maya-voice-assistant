@@ -41,22 +41,19 @@
 ## Maya in action – OnePlus 6
 
 <p align="center">
-  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">
-    <img src="docs/media/maya-oneplus6-pisipilt.png" width="300" alt="MAYA running on a OnePlus 6 – screen recording">
-  </a>
+  <img src="docs/media/maya-oneplus6-demo.webp" width="320" alt="MAYA running on a OnePlus 6 – excerpt from a screen recording">
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">▶ Watch the demo (2 min 35 s, 17 MB)</a></strong><br>
-  <sub>The button and the image open the video file in this repository. GitHub does
-  not play repository-hosted video inside a README, so your browser will download
-  the file and open it in your own player.</sub>
+  <sub><strong>Plays right here</strong> — a 24-second excerpt, looping, <strong>without sound</strong>.<br>
+  Full recording with audio (2 min 35 s, 17 MB):
+  <a href="https://github.com/banaaniwabariik-rgb/maya-voice-assistant/blob/main/docs/media/maya-oneplus6.mp4">maya-oneplus6.mp4</a></sub>
 </p>
 
 This is a **real screen recording** of MAYA running on a **OnePlus 6
-Android phone** — not an animation, a mockup or a post-produced demo.
-It shows the actual interface: the voice visualiser, switching
-characters, the live transcript and the call controls.
+Android phone** — not a mockup or a post-produced demo, just the phone
+screen as it is. It shows the actual interface: the voice visualiser,
+switching characters, the live transcript and the call controls.
 
 > The recording is in Estonian, because that is the language MAYA
 > speaks. You can still see how it behaves without understanding it.

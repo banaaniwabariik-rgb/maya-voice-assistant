@@ -56,7 +56,8 @@ backups_*/
 *.png
 !android/app/src/main/res/**/*.png
 # ERAND: docs/media/ on projekti enda avalik meedia (demovideo ja selle
-# pisipilt). Siia käib AINULT teadlikult avalikuks mõeldud materjal.
+# animeeritud katkend). Siia käib AINULT teadlikult avalikuks mõeldud
+# materjal.
 !docs/media/
 !docs/media/**
 downloads/
