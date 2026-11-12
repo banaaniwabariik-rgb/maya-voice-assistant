@@ -157,7 +157,7 @@ If you pick Google Cloud, this is a sensible starting point:
 | Setting | Recommendation | Why this one |
 |---|---|---|
 | **Service** | Compute Engine (a virtual machine) | an ordinary Linux server, where MAYA runs like on any other machine. Not Cloud Run or App Engine — MAYA holds **long-lived WebSocket and SSE connections** and writes to a local SQLite file, which would not survive in a serverless container |
-| **Region** | **`europe-north1`** (Hamina, **Finland**) | per Google's documentation the closest region to Estonia → **lowest latency**, which matters most in a voice conversation. Google also flags this region as “low CO₂”. Zones: `europe-north1-a/-b/-c` |
+| **Region** | **`europe-north1`** (Hamina, **Finland**) | a **geographically sensible nearby region** for Estonian users — Finland is just across the gulf and this is Google's closest Nordic region. Google also flags it as “low CO₂”. Zones: `europe-north1-a/-b/-c`. **We do not guarantee latency:** actual delay depends on your internet connection, ISP and route, not only on distance. If it matters to you, measure it yourself (`ping`, `mtr`) and compare with e.g. `europe-west1` |
 | **Machine** | **`e2-standard-2`** — 2 vCPUs, 8 GB RAM | **headroom, not a requirement.** MAYA's minimum is 2 GB RAM; 8 GB means SQLite, the Python process, a reverse proxy and system updates won't start competing with each other even with several users. `e2` is Google's cheapest general-purpose series |
 | **Operating system** | **Ubuntu 22.04 LTS** or **24.04 LTS** | LTS = long-term support, no frequent major upgrades. MAYA is **verified** on Linux and the installer scripts are bash scripts. Ubuntu's repositories carry Python 3.11+ |
 | **Disk** | **30–50 GB SSD** (balanced) | the OS plus the Python environment takes ~3–5 GB. The rest is for **your data and backups**: memory facts, the conversation archive and logs grow slowly but continuously. The 10 GB default fills up, and resizing later is more hassle than choosing right now |
@@ -347,10 +347,37 @@ What that $5 **is** and **is not**:
 
 | | |
 |---|---|
-| ✅ **It IS** | **API credit** — a prepayment you then spend on requests. The money stays yours to use |
+| ✅ **It IS** | **API credit** — a prepayment you then spend on requests |
 | ❌ **It is NOT** | a monthly fee or subscription |
 | ❌ **It is NOT** | an activation or sign-up fee |
-| ❌ **It is NOT** | money that disappears if you don't use it |
+| ⏳ **BUT** | **the credit does expire** — see below |
+
+#### Prepaid credit expires, and the voice stops when it runs out
+
+Two things worth knowing before you prepay:
+
+**1. The credit expires.** Google's wording: *“Purchased credits expire
+after 1 year. After expiration, credits are forfeited and can't be
+retrieved”* — purchased credit expires **12 months after the purchase
+date** and is forfeited after that. So there is no point prepaying more
+than you can use within a year.
+
+**2. When the balance reaches zero, the API stops.** Google's wording:
+*“When your Prepay credit balance on the billing account hits \$0, all
+API keys in all projects linked to that billing account will stop
+working simultaneously”*. In practice:
+
+| | |
+|---|---|
+| What happens | **all** API keys linked to that billing account stop working **at the same time** |
+| What the API returns | `HTTP 402 Payment Required` |
+| Does it fall back to the free tier? | **NO** — there is no automatic downgrade; the service simply stops |
+| What that means for MAYA | **the voice simply stops.** MAYA will not speak until you add credit |
+| How to recover | top up the credit in Google's billing view |
+
+> **Recommendation:** set a budget alert (see
+> [“Limiting spend”](#limiting-spend)) **before** the balance runs out,
+> so the voice stopping doesn't surprise you mid-conversation.
 
 > **$5 does NOT equal any fixed number of conversation minutes.** Cost
 > depends on how long and how much you talk: **incoming audio, outgoing

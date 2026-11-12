@@ -148,7 +148,7 @@ Kui valid Google Cloudi, on see mõistlik lähtepunkt:
 | Säte | Soovitus | Miks just see |
 |---|---|---|
 | **Teenus** | Compute Engine (virtuaalmasin) | tavaline Linuxi server, millel MAYA jookseb nagu igal muul masinal. Mitte Cloud Run ega App Engine — MAYA hoiab **püsivaid WebSocket- ja SSE-ühendusi** ning kirjutab kohalikku SQLite faili, mis serverita konteineris ei püsiks |
-| **Regioon** | **`europe-north1`** (Hamina, **Soome**) | Google'i dokumentatsiooni järgi lähim regioon Eestile → **madalaim latents**, mis häälvestluses on kõige olulisem. Google märgib selle regiooni ka „low CO₂" sildiga. Tsoonid: `europe-north1-a/-b/-c` |
+| **Regioon** | **`europe-north1`** (Hamina, **Soome**) | **geograafiliselt mõistlik lähiregioon** Eesti kasutajale — Soome on üle lahe ja see on Google'i lähim Põhjamaade regioon. Google märgib selle ka „low CO₂" sildiga. Tsoonid: `europe-north1-a/-b/-c`. **Latentsi me ei garanteeri:** tegelik viivitus sõltub sinu internetiühendusest, operaatorist ja marsruudist, mitte ainult kaugusest. Kui tahad kindlust, mõõda ise (`ping`, `mtr`) ja võrdle nt `europe-west1`-ga |
 | **Masin** | **`e2-standard-2`** — 2 vCPU, 8 GB RAM | **varu, mitte vajadus.** MAYA miinimum on 2 GB RAM; 8 GB tähendab, et SQLite, Pythoni protsess, pöördproksi ja süsteemiuuendused ei hakka üksteist segama ka siis, kui kasutajaid on mitu. `e2` on Google'i soodsaim üldotstarbeline seeria |
 | **Operatsioonisüsteem** | **Ubuntu 22.04 LTS** või **24.04 LTS** | LTS = pikaajaline tugi, ei vaja sagedast suurt uuendust. MAYA on Linuxil **kontrollitud** ja paigaldusskriptid on bash-skriptid. Ubuntu repos on Python 3.11+ olemas |
 | **Ketas** | **30–50 GB SSD** (balanced) | OS + Python keskkond võtab ~3–5 GB. Ülejäänu on **sinu andmetele ja varukoopiatele**: mälufaktid, vestlusarhiiv ja logid kasvavad aeglaselt, aga pidevalt. 10 GB vaikeketas saab otsa ja ketta suurendamine hiljem on tüütum kui kohe õige valimine |
@@ -334,10 +334,37 @@ Oluline, mida see **$5 ON ja MIS SEE EI OLE**:
 
 | | |
 |---|---|
-| ✅ **See ON** | **API krediit** — ettemaks, mille sa kulutad päringute peale. Raha jääb sinu kasutuseks |
+| ✅ **See ON** | **API krediit** — ettemaks, mille sa kulutad päringute peale |
 | ❌ **See EI OLE** | kuutasu ega tellimus |
 | ❌ **See EI OLE** | aktiveerimis- ega liitumistasu |
-| ❌ **See EI OLE** | summa, mis kaob kasutamata jätmisel |
+| ⏳ **AGA** | **krediidil on aegumistähtaeg** — vt allpool |
+
+#### Ettemakstud krediit aegub ja otsa saades hääl seiskub
+
+Kaks asja, mida tasub enne ettemaksu teadmist:
+
+**1. Krediit aegub.** Google'i sõnastus: *„Purchased credits expire
+after 1 year. After expiration, credits are forfeited and can't be
+retrieved"* — ostetud krediit aegub **12 kuud pärast ostukuupäeva** ja
+pärast seda on see kaotatud. Seega ei ole mõtet maksta ette rohkem,
+kui jõuad aasta jooksul ära kasutada.
+
+**2. Kui jääk jõuab nullini, API lõpetab töö.** Google'i sõnastus:
+*„When your Prepay credit balance on the billing account hits \$0, all
+API keys in all projects linked to that billing account will stop
+working simultaneously"*. Praktikas tähendab see:
+
+| | |
+|---|---|
+| Mis juhtub | **kõik** selle arvelduskontoga seotud API võtmed lõpetavad töö **korraga** |
+| Mida API vastab | `HTTP 402 Payment Required` |
+| Kas tasuta tasemele minnakse tagasi? | **EI** — automaatset langust tasuta tasemele ei toimu, teenus lihtsalt seisab |
+| Mida see MAYA puhul tähendab | **hääl lihtsalt lõpeb.** MAYA ei räägi enam, kuni lisad krediiti |
+| Kuidas taastada | lisa krediiti juurde Google'i arveldusvaates |
+
+> **Soovitus:** sea eelarveteade (vt [„Kulude piiramine"](#kulude-piiramine))
+> **enne** kui jääk otsa saab, et hääle seiskumine ei tuleks üllatusena
+> keset vestlust.
 
 > **$5 EI tähenda mingit kindlat arvu vestlusminuteid.** Kulu sõltub
 > sellest, kui kaua ja kui palju sa räägid: arvestatakse **sisenevat
