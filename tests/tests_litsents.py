@@ -315,18 +315,37 @@ class TestHoidlaTerviklikkus(unittest.TestCase):
         read = self._git("remote", "-v").strip()
         if not read:
             return  # kaugharu puudub – kohalik koopia, igati korras
-        LUBATUD = "maya-voice-assistant"
+        # Me EI nõua kindlat hoidlanime: kahvel (fork), peegel või
+        # kohalik kloon on täiesti legitiimsed ja neil on oma aadress.
+        # Keelatud on AINULT see, mis päriselt ohtlik oleks – et avalik
+        # koopia osutaks omaniku PRIVAATSELE originaalile või
+        # tootmisserverile.
+        KEELATUD = ("maya_projekti_kaust", "voice-agent", "server-2")
         for rida in read.splitlines():
-            if not rida.strip():
-                continue
-            url = rida.split()[1] if len(rida.split()) > 1 else ""
-            self.assertIn(LUBATUD, url,
-                          f"kaugharu viitab võõrasse hoidlasse: {url}")
-            self.assertNotIn("maya_projekti_kaust", url,
-                             "kaugharu viitab PRIVAATSELE originaalile")
+            osad = rida.split()
+            url = osad[1] if len(osad) > 1 else ""
+            for k in KEELATUD:
+                self.assertNotIn(
+                    k, url,
+                    f"kaugharu viitab privaatsesse sihtkohta ({k}): {url}")
 
     def test_45_originaalprojekti_ajalugu_ei_ole_imporditud(self):
-        """Avalik koopia algab oma esimesest commit'ist."""
+        """Avalik koopia algab oma esimesest commit'ist.
+
+        NB: SEDA EI SAA KONTROLLIDA LÜHENDATUD (shallow) KLOONIS.
+        GitHub Actions kloonib vaikimisi `fetch-depth: 1`, mille puhul
+        ainsal toodud commit'il EI OLE vanemat kirjas – `git rev-list
+        --max-parents=0` peab siis juurcommit'iks hoopis KÕIGE
+        UUEMAT commit'i. Varasem versioon sellest testist kukkus CI-s
+        just sellepärast läbi (ja andis eksitava veateate, nagu oleks
+        ajalugu vale). Lühendatud kloonis jätame kontrolli vahele ja
+        ütleme selle VÄLJA – täiskontroll käib kohalikult ja
+        privaatsustöös, kus `fetch-depth: 0`.
+        """
+        if self._git("rev-parse", "--is-shallow-repository").strip() == "true":
+            raise unittest.SkipTest(
+                "lühendatud kloon (shallow) – juurcommit'i ei saa "
+                "usaldusväärselt tuvastada; kontroll tehakse täisklooniga")
         juured = self._git("rev-list", "--max-parents=0", "HEAD").split()
         self.assertEqual(1, len(juured),
                          f"hoidlal on {len(juured)} juurcommit'i – "
